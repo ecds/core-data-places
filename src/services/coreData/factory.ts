@@ -22,9 +22,10 @@ export const ModelNames = {
 
 /**
  * Returns the name of the models for which a service exists. We'll exclude media_contents since we do not
- * want to build static paths for media.
+ * want to build static paths for media, and taxonomies since no service exists for it (getService returns
+ * undefined, which crashes static prerenders of /api/taxonomies).
  */
-const getModels = () => _.without(_.values(ModelNames), ModelNames.mediaContents);
+const getModels = () => _.without(_.values(ModelNames), ModelNames.mediaContents, ModelNames.taxonomies);
 
 /**
  * Returns the service for the passed name.
