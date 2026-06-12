@@ -27,6 +27,12 @@ export const truncateManifestId = (manifestId: string) => {
 export const getManifests = async () => {
   const data = [];
 
+  // Sites without a gallery still prerender the gallery route in static
+  // builds; render it empty rather than crashing on an invalid URL.
+  if (!config.gallery) {
+    return data;
+  }
+
   const json = await fetchJson(config.gallery);
   const items = json.items || []
 
