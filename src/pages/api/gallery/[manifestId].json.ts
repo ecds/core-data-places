@@ -13,6 +13,11 @@ export const GET: APIRoute = async ({ params }) => {
 };
 
 export const getStaticPaths = async () => {
+  // Sites without a gallery have no manifest routes to prerender.
+  if (!config.gallery) {
+    return [];
+  }
+
   const topLevel = await fetchJson(config.gallery);
 
   return topLevel.items.map(({ id }) => ({
