@@ -30,6 +30,7 @@ node_modules
 
 # Ignore user-defined fields and search JSON
 /src/i18n/userDefinedFields.json
+/src/i18n/descriptorOptions.json
 /src/i18n/search.json
 
 # Temporary directory
@@ -52,3 +53,4 @@ tmp/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+.gstack/

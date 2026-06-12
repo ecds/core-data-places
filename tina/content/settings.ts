@@ -5,6 +5,16 @@ import TinaMapLayerURLField from '../components/TinaMapLayerURLField';
 import RebuildSiteButton from '../components/RebuildSiteButton';
 import { postMetadata } from './posts';
 import _ from 'underscore';
+import descriptorOptions from '../../src/i18n/descriptorOptions.json';
+
+/**
+ * Returns an `options` attribute when introspected pick-list options are
+ * available for the configured project(s); otherwise the field stays
+ * free-text (e.g. when the Core Data API doesn't expose descriptor kinds).
+ */
+const pickList = (options: { label: string, value: string }[]) => (
+  _.isEmpty(options) ? {} : { options }
+);
 
 const editioncrafterConfigFields: TinaField<false>[] = [{
   name: 'xml_id_field',
@@ -32,6 +42,47 @@ const editioncrafterConfigFields: TinaField<false>[] = [{
     label: 'Label',
     type: 'string'
   }]
+}];
+
+const wordpressFields: TinaField<false>[] = [{
+  name: 'host',
+  label: 'Host',
+  description: 'Base URL of the WordPress site, e.g. https://wp.example.org',
+  type: 'string'
+}, {
+  name: 'field',
+  label: 'Field',
+  description: 'The user-defined field containing the WordPress post/page ID or slug.',
+  type: 'string',
+  ...pickList(descriptorOptions.fields)
+}, {
+  name: 'resource',
+  label: 'Resource',
+  type: 'string',
+  options: ['posts', 'pages']
+}];
+
+const relatedManifestFields: TinaField<false>[] = [{
+  name: 'model',
+  label: 'Model',
+  description: 'The related record type whose IIIF manifest is displayed (usually Media Contents).',
+  type: 'string',
+  options: [
+    { label: 'Events', value: 'events' },
+    { label: 'Instances', value: 'instances' },
+    { label: 'Items', value: 'items' },
+    { label: 'Media Contents', value: 'media_contents' },
+    { label: 'Organizations', value: 'organizations' },
+    { label: 'People', value: 'people' },
+    { label: 'Places', value: 'places' },
+    { label: 'Taxonomies', value: 'taxonomies' },
+    { label: 'Works', value: 'works' }
+  ]
+}, {
+  name: 'relationship',
+  label: 'Relationship',
+  type: 'string',
+  ...pickList(descriptorOptions.relationships)
 }];
 
 const sortOptions = _.map(postMetadata, (field) => ({
@@ -185,15 +236,7 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'resources_field',
           label: 'Resources Field',
@@ -204,6 +247,11 @@ const Settings: Collection = {
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }, {
         name: 'instances',
@@ -213,20 +261,17 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'editioncrafter_config',
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }, {
         name: 'items',
@@ -236,20 +281,17 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'editioncrafter_config',
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }, {
         name: 'organizations',
@@ -259,20 +301,17 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'editioncrafter_config',
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }, {
         name: 'people',
@@ -282,20 +321,17 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'editioncrafter_config',
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }, {
         name: 'places',
@@ -305,20 +341,17 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'editioncrafter_config',
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }, {
         name: 'taxonomies',
@@ -328,20 +361,17 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'editioncrafter_config',
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }, {
         name: 'works',
@@ -351,20 +381,17 @@ const Settings: Collection = {
           name: 'related_manifest',
           label: 'Related Manifest',
           type: 'object',
-          fields: [{
-            name: 'model',
-            label: 'Model',
-            type: 'string'
-          }, {
-            name: 'relationship',
-            label: 'Relationship',
-            type: 'string'
-          }]
+          fields: relatedManifestFields
         }, {
           name: 'editioncrafter_config',
           label: 'EditionCrafter config',
           type: 'object',
           fields: editioncrafterConfigFields
+        }, {
+          name: 'wordpress',
+          label: 'WordPress longform',
+          type: 'object',
+          fields: wordpressFields
         }]
       }]
     }, {
@@ -440,6 +467,9 @@ const Settings: Collection = {
       }, {
         label: 'Georeference',
         value: 'georeference'
+      }, {
+        label: 'PMTiles',
+        value: 'pmtiles'
       }]
     }, {
       name: 'url',
@@ -580,6 +610,11 @@ const Settings: Collection = {
       label: 'Geo-search',
       type: 'boolean'
     }, {
+      name: 'result_limit',
+      label: 'Result limit',
+      description: 'Maximum number of hits loaded into the browser per search. Recommended for large datasets (e.g. 1000).',
+      type: 'number'
+    }, {
       name: 'facets',
       label: 'Facets',
       type: 'object',
@@ -593,7 +628,8 @@ const Settings: Collection = {
         name: 'name',
         label: 'Name',
         type: 'string',
-        required: true
+        required: true,
+        ...pickList(descriptorOptions.facets)
       }, {
         name: 'icon',
         label: 'Icon',
@@ -669,7 +705,8 @@ const Settings: Collection = {
         name: 'relationships',
         label: 'Relationships',
         type: 'string',
-        list: true
+        list: true,
+        ...pickList(descriptorOptions.relationships)
       }, {
         name: 'tags',
         label: 'Tags',
@@ -756,12 +793,14 @@ const Settings: Collection = {
           name: 'exclude',
           label: 'Exclude',
           type: 'string',
-          list: true
+          list: true,
+          ...pickList(descriptorOptions.facets)
         }, {
           name: 'include',
           label: 'Include',
           type: 'string',
-          list: true
+          list: true,
+          ...pickList(descriptorOptions.facets)
         }]
       }, {
         name: 'overrides',
