@@ -92,7 +92,7 @@ const PathList = (props: Props) => {
                   <ListboxOption key='all' value={null} className='data-focus:bg-gray-100 px-4 py-2 text-sm cursor-pointer'>
                     { t('all') }
                   </ListboxOption>
-                  { _.map(config.content.paths_config.categories, (cat) => (
+                  { _.map(config.content?.paths_config?.categories, (cat) => (
                     <ListboxOption key={cat} value={cat} className='data-focus:bg-gray-100 px-4 py-2 text-sm cursor-pointer'>
                       {cat}
                     </ListboxOption>
