@@ -33,7 +33,7 @@ const FitBounds = () => {
    * map viewport, or when 'zoom_to_place' is disabled.
    */
   const fitBoundingBox = useMemo(() => (
-    !isRefinedWithMap() && route === '/' && config.map.zoom_to_place
+    !isRefinedWithMap() && route === '/' && config.map?.zoom_to_place
   ), [route, isRefinedWithMap()]);
 
   const fitScheduledRef = useRef(false);

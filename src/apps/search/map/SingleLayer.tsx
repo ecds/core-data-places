@@ -20,8 +20,8 @@ const SingleLayer = (props) => {
     <>
       <SearchResultsLayer
         data={data}
-        cluster={!!config.map.cluster_radius}
-        clusterRadius={config.map.cluster_radius}
+        cluster={!!config.map?.cluster_radius}
+        clusterRadius={config.map?.cluster_radius}
         fitBoundingBox={false}
         interactive
       />

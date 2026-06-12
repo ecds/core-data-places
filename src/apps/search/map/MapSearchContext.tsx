@@ -137,7 +137,7 @@ export const MapSearchContextProvider = ({ allowSave, children, preload }: Props
   useEffect(() => {
     const options = {};
 
-    if (config.map.cluster_radius) {
+    if (config.map?.cluster_radius) {
       _.extend(options, { type: 'Point' });
     }
 

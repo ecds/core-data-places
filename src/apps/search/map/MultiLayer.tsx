@@ -11,8 +11,8 @@ const MultiLayer = (props) => {
     <>
       <SearchResultsLayer
         data={feature.properties.url}
-        cluster={!!config.map.cluster_radius}
-        clusterRadius={config.map.cluster_radius}
+        cluster={!!config.map?.cluster_radius}
+        clusterRadius={config.map?.cluster_radius}
         fitBoundingBox={false}
         interactive
         key={`layer-${feature.properties.uuid}`}
