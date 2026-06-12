@@ -42,7 +42,9 @@ export default defineConfig({
     }
     return cms;
   },
-  contentApiUrlOverride: '/api/tina/gql',
+  // In local dev the admin must talk to the `tinacms dev` GraphQL server
+  // directly; '/api/tina/gql' only exists on deployed (self-hosted) sites.
+  ...(isLocal ? {} : { contentApiUrlOverride: '/api/tina/gql' }),
   localContentPath,
   media: {
     loadCustomStore: async () => {
