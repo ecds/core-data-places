@@ -3,6 +3,7 @@ import useHoverable from '@apps/search/map/useHoverable';
 import useSelectable from '@apps/search/map/useSelectable';
 import { SearchList, useCachedHits } from '@performant-software/core-data';
 import { useNavigate } from '@peripleo/peripleo';
+import { useStats } from 'react-instantsearch';
 import { getAttributes, getHitValue } from '@utils/search';
 import clsx from 'clsx';
 import { useCallback, useMemo } from 'react';
@@ -17,6 +18,10 @@ const ListView = (props: Props) => {
   const config = useSearchConfig();
   const hits = useCachedHits();
   const navigate = useNavigate();
+
+  // True total from the search index; the cached hits only hold the pages
+  // loaded so far (and result_limit caps them), so hits.length under-counts.
+  const { nbHits } = useStats();
 
   const { isHover, onPointEnter, onPointLeave } = useHoverable();
   const { isSelected } = useSelectable();
@@ -63,6 +68,7 @@ const ListView = (props: Props) => {
     >
       <SearchList
         attributes={attributes}
+        count={nbHits}
         className='flex flex-col'
         isHighlight={(item) => isHover(item) || isSelected(item)}
         items={hits}

@@ -26,14 +26,21 @@ const CurrentRefinementsList = () => {
         <li
           key={index}
         >
-          { _.map(item.refinements, (refinement) => (
-            <Pill
-              className='text-xs font-light my-1'
-              label={`${getLabel(item.label)}: ${refinement.label}`}
-              onRemove={() => refine(refinement)}
-              primary
-            />
-          ))}
+          { _.map(item.refinements, (refinement) => {
+            // The facet label can be unresolvable (e.g. a relationship UUID
+            // missing from the generated translations); fall back to the
+            // bare refinement value rather than rendering "undefined: ...".
+            const label = getLabel(item.attribute);
+
+            return (
+              <Pill
+                className='text-xs font-light my-1'
+                label={label ? `${label}: ${refinement.label}` : refinement.label}
+                onRemove={() => refine(refinement)}
+                primary
+              />
+            );
+          })}
         </li>
       ))}
     </ul>

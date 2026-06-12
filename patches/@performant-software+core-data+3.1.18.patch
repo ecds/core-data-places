@@ -1,0 +1,24 @@
+diff --git a/node_modules/@performant-software/core-data/dist/index.cjs65.js b/node_modules/@performant-software/core-data/dist/index.cjs65.js
+index aeba1c4..d667c63 100644
+--- a/node_modules/@performant-software/core-data/dist/index.cjs65.js
++++ b/node_modules/@performant-software/core-data/dist/index.cjs65.js
+@@ -1,2 +1,2 @@
+-"use strict";const i=require("./index.cjs76.js"),s=require("react"),u=require("./index.cjs78.js"),x=require("@performant-software/shared-components"),h=require("./index.cjs167.js"),l=require("./index.cjs109.js"),c=50,d=s.memo(h),g=e=>{const[m,o]=s.useState(c),n=s.useRef(null),r=s.useCallback(()=>{o(t=>e.items.length>t?t+c:t)},[e.items]);return i.jsxRuntimeExports.jsxs("div",{className:u.clsx("h-full flex flex-col",e.className),children:[i.jsxRuntimeExports.jsxs("div",{className:"text-sm italic bg-white sticky top-0 py-2.5 px-6 shadow-sm",children:[e.items.length," ",e.items.length===1?l.t("Common.words.result"):l.t("Common.words.results")]}),i.jsxRuntimeExports.jsx("div",{className:"overflow-y-auto h-full",tabIndex:0,ref:n,children:i.jsxRuntimeExports.jsx(x.InfiniteScroll,{as:"ul",className:"divide-y divide-solid divide-neutral-200",offset:150,onBottomReached:r,context:n,children:e.items.slice(0,m).map((t,a)=>i.jsxRuntimeExports.jsx(d,{attributes:e.attributes,item:t,isHighlight:e.isHighlight&&e.isHighlight(t),title:typeof e.itemTitle=="string"?t[e.itemTitle]:e.itemTitle(t),onClick:e.onItemClick,onPointerEnter:e.onItemPointerEnter,onPointerLeave:e.onItemPointerLeave,tags:e.tags},a))},e.items.length)})]})};module.exports=g;
++"use strict";const i=require("./index.cjs76.js"),s=require("react"),u=require("./index.cjs78.js"),x=require("@performant-software/shared-components"),h=require("./index.cjs167.js"),l=require("./index.cjs109.js"),c=50,d=s.memo(h),g=e=>{const[m,o]=s.useState(c),n=s.useRef(null),r=s.useCallback(()=>{o(t=>e.items.length>t?t+c:t)},[e.items]);return i.jsxRuntimeExports.jsxs("div",{className:u.clsx("h-full flex flex-col",e.className),children:[i.jsxRuntimeExports.jsxs("div",{className:"text-sm italic bg-white sticky top-0 py-2.5 px-6 shadow-sm",children:[e.count??e.items.length," ",(e.count??e.items.length)===1?l.t("Common.words.result"):l.t("Common.words.results")]}),i.jsxRuntimeExports.jsx("div",{className:"overflow-y-auto h-full",tabIndex:0,ref:n,children:i.jsxRuntimeExports.jsx(x.InfiniteScroll,{as:"ul",className:"divide-y divide-solid divide-neutral-200",offset:150,onBottomReached:r,context:n,children:e.items.slice(0,m).map((t,a)=>i.jsxRuntimeExports.jsx(d,{attributes:e.attributes,item:t,isHighlight:e.isHighlight&&e.isHighlight(t),title:typeof e.itemTitle=="string"?t[e.itemTitle]:e.itemTitle(t),onClick:e.onItemClick,onPointerEnter:e.onItemPointerEnter,onPointerLeave:e.onItemPointerLeave,tags:e.tags},a))},e.items.length)})]})};module.exports=g;
+ //# sourceMappingURL=index.cjs65.js.map
+diff --git a/node_modules/@performant-software/core-data/dist/index.es65.js b/node_modules/@performant-software/core-data/dist/index.es65.js
+index 21ea235..898ed2f 100644
+--- a/node_modules/@performant-software/core-data/dist/index.es65.js
++++ b/node_modules/@performant-software/core-data/dist/index.es65.js
+@@ -17,9 +17,9 @@ const n = 50, v = r(g), C = (t) => {
+       ),
+       children: [
+         /* @__PURE__ */ i.jsxs("div", { className: "text-sm italic bg-white sticky top-0 py-2.5 px-6 shadow-sm", children: [
+-          t.items.length,
++          t.count ?? t.items.length,
+           " ",
+-          t.items.length === 1 ? l.t("Common.words.result") : l.t("Common.words.results")
++          (t.count ?? t.items.length) === 1 ? l.t("Common.words.result") : l.t("Common.words.results")
+         ] }),
+         /* @__PURE__ */ i.jsx(
+           "div",

@@ -5,11 +5,12 @@ import {
   OverlayLayers,
   Peripleo as PeripleoUtils
 } from '@performant-software/core-data';
-import { Map as PeripleoMap, useLoadedMap, ZoomControl } from '@peripleo/maplibre';
+import { Map as PeripleoMap, useMap, ZoomControl } from '@peripleo/maplibre';
 import { MapProvider, useRuntimeConfig } from '@peripleo/peripleo';
 import clsx from 'clsx';
 import { type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import _ from 'underscore';
+import PMTilesLayer from './PMTilesLayer';
 
 /**
  * Defers rendering children until the underlying MapLibre style has fully
@@ -21,23 +22,56 @@ import _ from 'underscore';
  * events avoids that race.
  */
 const WhenStyleLoaded = ({ children }: { children: ReactNode }) => {
-  const map = useLoadedMap() as any;
+  // `useMap` (not `useLoadedMap`): the loaded flag behind `useLoadedMap` is
+  // only set by MapLibre's 'load' event, which never fires when the initial
+  // render loop stalls (observed on cold loads: style metadata fetched, no
+  // tile requests, blank canvas until a user gesture). The raw map instance
+  // is available immediately, so we can watch style readiness ourselves.
+  const map = useMap() as any;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!map) return;
-    if (typeof map.isStyleLoaded === 'function' && map.isStyleLoaded()) {
+    if (!map || ready) return;
+
+    let cancelled = false;
+
+    const onReady = () => {
+      if (cancelled) return;
       setReady(true);
+
+      // Kick the render loop: a map whose 'load' never fired has not
+      // requested tiles or painted; resize + repaint restarts it.
+      map.resize?.();
+      map.triggerRepaint?.();
+    };
+
+    if (typeof map.isStyleLoaded === 'function' && map.isStyleLoaded()) {
+      onReady();
       return;
     }
-    const onReady = () => setReady(true);
-    map.once?.('styledata', onReady);
+
     map.once?.('load', onReady);
+
+    // Fallback poll: 'load'/'styledata' can be missed entirely when the
+    // event fired before we attached, or never fires on a stalled loop.
+    // Kick the render loop on every tick while waiting — a stalled map has
+    // fetched style metadata but never requests tiles or paints.
+    const interval = setInterval(() => {
+      if (map.isStyleLoaded?.()) {
+        clearInterval(interval);
+        onReady();
+      } else {
+        map.resize?.();
+        map.triggerRepaint?.();
+      }
+    }, 250);
+
     return () => {
-      map.off?.('styledata', onReady);
+      cancelled = true;
+      clearInterval(interval);
       map.off?.('load', onReady);
     };
-  }, [map]);
+  }, [map, ready]);
 
   return ready ? <>{children}</> : null;
 };
@@ -111,8 +145,17 @@ const Map = (props: Props) => {
         </div>
         <WhenStyleLoaded>
           <OverlayLayers
-            overlays={overlays}
+            overlays={_.filter(overlays, (overlay: any) => overlay.layer_type !== 'pmtiles')}
           />
+          { _.filter(overlays, (overlay: any) => overlay.layer_type === 'pmtiles').map((overlay: any) => (
+            <PMTilesLayer
+              id={overlay.name}
+              key={overlay.name}
+              labelField={overlay.label_field}
+              styles={overlay.styles}
+              url={overlay.url}
+            />
+          ))}
           { props.children }
         </WhenStyleLoaded>
       </PeripleoMap>
