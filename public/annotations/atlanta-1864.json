@@ -1,0 +1,90 @@
+{
+  "@context": "http://iiif.io/api/extension/georef/1/context.json",
+  "type": "AnnotationPage",
+  "items": [
+    {
+      "id": "atlanta-1864-vincent",
+      "type": "Annotation",
+      "motivation": "georeferencing",
+      "target": {
+        "type": "SpecificResource",
+        "source": {
+          "id": "https://tile.loc.gov/image-services/iiif/service:gmd:gmd392:g3924:g3924a:cws00044",
+          "type": "ImageService2",
+          "height": 5994,
+          "width": 4374
+        },
+        "selector": {
+          "type": "SvgSelector",
+          "value": "<svg width=\"4374\" height=\"5994\"><polygon points=\"560,1320 3900,1320 3900,3980 560,3980\" /></svg>"
+        }
+      },
+      "body": {
+        "type": "FeatureCollection",
+        "transformation": {
+          "type": "polynomial",
+          "options": {
+            "order": 1
+          }
+        },
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "Peachtree St × Wheat St (Auburn Ave)",
+              "resourceCoords": [2300, 2590]
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [-84.388513, 33.756248]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "Peachtree St × Ellis St",
+              "resourceCoords": [2300, 2350]
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [-84.387625, 33.758438]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "Collins St (Courtland) × Wheat St (Auburn Ave)",
+              "resourceCoords": [2680, 2590]
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [-84.384271, 33.755556]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "City Cemetery (Oakland, original six acres)",
+              "resourceCoords": [3310, 3312]
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [-84.3736, 33.7487]
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {
+              "label": "Forsyth St × Hunter St (MLK Jr Dr)",
+              "resourceCoords": [1900, 2935]
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [-84.393439, 33.752825]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -13,8 +13,15 @@ const branch =
   process.env.HEAD ||
   'main';
 
+// Match the datalayer port used by `tinacms dev --datalayer-port <port>`;
+// createLocalDatabase() otherwise always connects to the default 9000 and the
+// dev server hangs forever at "Indexing local files" when they differ.
+const datalayerPort = process.env.TINA_DATALAYER_PORT
+  ? Number(process.env.TINA_DATALAYER_PORT)
+  : undefined;
+
 export default isLocal
-  ? createLocalDatabase()
+  ? createLocalDatabase(datalayerPort ? { port: datalayerPort } : undefined)
   : createDatabase({
     gitProvider: new GitHubProvider({
       branch,

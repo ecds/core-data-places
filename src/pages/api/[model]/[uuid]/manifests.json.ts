@@ -1,5 +1,5 @@
 import ServiceFactory from '@services/coreData/factory';
-import { buildResponse, buildStaticPaths } from '@utils/api';
+import { buildResponse, buildStaticPaths, fixManifestIds } from '@utils/api';
 import { APIRoute, GetStaticPaths } from 'astro';
 
 export const GET: APIRoute = async ({ params }) => {
@@ -8,7 +8,7 @@ export const GET: APIRoute = async ({ params }) => {
   const service = ServiceFactory.getService(model);
   const data = await service.getRelatedManifests(uuid);
 
-  return buildResponse(data);
+  return buildResponse(fixManifestIds(data));
 };
 
 export const getStaticPaths = (async () => await buildStaticPaths()) satisfies GetStaticPaths;

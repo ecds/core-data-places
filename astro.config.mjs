@@ -36,6 +36,12 @@ export default defineConfig({
     },
     plugins: [tailwindcss()],
     resolve: {
+      // A single maplibre-gl instance app-wide: @peripleo/maplibre and
+      // @allmaps/maplibre nest their own 4.7.1 copies, which breaks
+      // module-global registries like maplibregl.addProtocol ('pmtiles' tiles
+      // silently never load because the protocol is registered on a different
+      // copy than the one rendering the map).
+      dedupe: ['maplibre-gl'],
       preserveSymlinks: true,
       mainFields: [
         'browser',

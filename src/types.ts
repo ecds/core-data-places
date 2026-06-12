@@ -17,6 +17,13 @@ export interface SearchConfig {
   name: string,
   route: string,
   geosearch?: boolean,
+
+  /**
+   * Caps how many hits are progressively loaded into the browser (list +
+   * result map). Without it the search streams the entire result set, which
+   * is unusable for large datasets. See MapSearchProvider.tsx.
+   */
+  result_limit?: number,
   timeline?: {
     date_range_facet: string,
     event_path?: string,
@@ -102,6 +109,17 @@ export interface Configuration {
         related_manifest?: {
           model: string,
           relationship: string
+        },
+
+        /**
+         * Renders longform content from a WordPress site on the detail page.
+         * `field` is the UUID of the user-defined field holding the WordPress
+         * post/page ID (or slug). `resource` defaults to "posts".
+         */
+        wordpress?: {
+          host: string,
+          field: string,
+          resource?: 'posts' | 'pages'
         }
       }
     },
@@ -126,9 +144,22 @@ export interface Configuration {
 
   layers?: Array<{
     name: string,
-    layer_type: 'geojson' | 'vector' | 'raster' | 'georeference',
+    layer_type: 'geojson' | 'vector' | 'raster' | 'georeference' | 'pmtiles',
     url: string,
-    overlay?: boolean
+    overlay?: boolean,
+
+    /**
+     * georeference layers only: opacity of the warped image (0-1).
+     */
+    opacity?: number,
+
+    /**
+     * pmtiles layers only: the feature property used for labels (default "name")
+     * and an optional array of MapLibre layer definitions overriding the
+     * default fill/line/circle/symbol styling. See PMTilesLayer.tsx.
+     */
+    label_field?: string,
+    styles?: any[]
   }>,
 
   result_filtering?: {

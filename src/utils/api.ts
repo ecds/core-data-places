@@ -16,6 +16,37 @@ export const buildResponse = (data) => {
   return new Response(JSON.stringify(data || ''), { status, headers });
 };
 
+/**
+ * Some Core Data deployments generate IIIF manifest/collection ids without a
+ * URL scheme (e.g. "coredata.ecds.io//core_data/public/v1/..."), which the
+ * browser then resolves relative to the page and 404s. Normalize such ids to
+ * absolute https URLs. Absolute ids pass through untouched.
+ */
+export const fixManifestId = (id: any) => {
+  if (typeof id !== 'string' || !id || /^https?:\/\//.test(id)) {
+    return id;
+  }
+
+  return `https://${id.replace(/^\/+/, '').replace('//', '/')}`;
+};
+
+/**
+ * Applies fixManifestId to the `id` of a IIIF collection and each of its items.
+ */
+export const fixManifestIds = (data: any) => {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  const result = { ...data, id: fixManifestId(data.id) };
+
+  if (Array.isArray(result.items)) {
+    result.items = result.items.map((item: any) => ({ ...item, id: fixManifestId(item.id) }));
+  }
+
+  return result;
+};
+
 interface Params {
   [key: string]: string
 };

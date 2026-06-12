@@ -2,6 +2,7 @@
 import Container from '@components/Container.astro';
 import Viewer from '@samvera/clover-iiif/viewer';
 import ServiceFactory from '@services/coreData/factory';
+import { fixManifestId } from '@utils/api';
 
 interface Props {
   model: string;
@@ -24,7 +25,7 @@ if (relatedRecords[relatedModel].length > 0) {
   const match = manifest.items.find(item => item.id.includes(relationshipUuid));
 
   if (match) {
-    manifestUrl = match.id;
+    manifestUrl = fixManifestId(match.id);
   }
 }
 ---

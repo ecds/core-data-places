@@ -15,6 +15,7 @@ import RelatedPlaces from '@apps/detailPages/RelatedPlaces.astro';
 import RelatedTaxonomies from '@apps/detailPages/RelatedTaxonomies.astro';
 import RelatedWorks from '@apps/detailPages/RelatedWorks.astro';
 import UserDefined from '@apps/detailPages/UserDefined.astro';
+import WordPressContent from '@apps/detailPages/WordPressContent.astro';
 import { getTranslations } from '@backend/i18n';
 import config from '@config';
 
@@ -96,6 +97,11 @@ const faircopyId = ecViewer && record.user_defined ? record.user_defined[ecViewe
 <div class='py-6 divide-y divide-solid divide-[#e5e5e5]'>
   <Container>
     <slot />
+    <WordPressContent
+      model={model}
+      record={record}
+      server:defer
+    />
     <UserDefined
       record={record}
       excludes={excludes}

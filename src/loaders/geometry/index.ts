@@ -23,7 +23,10 @@ const loader = {
       config.core_data.project_ids
     );
 
-    const params = { per_page: 20 };
+    // Larger page size keeps the one-time preload tractable for big datasets: OpenWorld
+    // Atlanta is ~38k places, which at the old per_page=20 was ~1,900 sequential API
+    // calls. The Core Data public API honors up to per_page=1000 (≈39 pages here).
+    const params = { per_page: 1000 };
 
     const startTime = Date.now();
     logger.info('Loading data...');
