@@ -75,6 +75,12 @@ const resolveSlug = (request: Request, url: URL): string | null => {
  * for nested server code, via AsyncLocalStorage (see @atlas/server).
  */
 export const onRequest = defineMiddleware(async (context, next) => {
+  // Liveness probe: never depend on atlas resolution or the console, so a
+  // load balancer's health check can't be knocked out by a console blip.
+  if (context.url.pathname === '/health') {
+    return next();
+  }
+
   const slug = resolveSlug(context.request, context.url);
   const bundle = await resolveAtlasBundle(slug);
 

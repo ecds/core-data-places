@@ -1,0 +1,29 @@
+# Deps + build outputs — reinstalled / rebuilt inside the image.
+node_modules
+dist
+.astro
+
+# Local-only content + symlinks that must never enter the image.
+# (content -> ../../og-demo-content/content is a host symlink; longform comes
+# from the user's WordPress at runtime, not a baked content tree.)
+content
+og-demo-content
+configs_backup_skip
+
+# Secrets + local env.
+.env
+.env.*
+
+# Local artifacts / backups / dev config swaps.
+public/tiles
+public/config.gca.json
+public/config.owa.json
+deploys
+*.log
+
+# VCS + tooling.
+.git
+.gitignore
+.github
+playwright-report
+test-results
