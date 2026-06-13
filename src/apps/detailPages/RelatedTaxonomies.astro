@@ -2,6 +2,7 @@
 import Relations from '@apps/detailPages/Relations.astro';
 import { getTranslations } from '@backend/i18n';
 import ServiceFactory from '@services/coreData/factory';
+import { getAtlasConfig } from '@atlas/server';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { groupRelationships } from '@utils/detailPages';
 
@@ -26,7 +27,7 @@ const { t } = await getTranslations(lang);
     label={t(uuid)}
     resolveDetailUrl={(taxonomy) => `/${lang}/taxonomies/${taxonomy.uuid}`}
     resolveName={taxonomy => taxonomy.name}
-    showLinks={hasDetailPage('taxonomies')}
+    showLinks={hasDetailPage('taxonomies', getAtlasConfig())}
     uuid={uuid}
   />
 ))}

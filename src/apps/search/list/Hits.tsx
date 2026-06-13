@@ -3,6 +3,7 @@ import GridHit from '@components/custom/project/GridHit'
 import ImageHit from '@components/custom/project/ImageHit'
 import ListHit from '@components/custom/project/ListHit'
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
+import { useRuntimeConfig } from '@peripleo/peripleo';
 import { Highlight } from 'react-instantsearch';
 import { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { getAttributes, getFacetLabel, getHitValue, getRelationshipLabel, isInverse } from '@utils/search';
@@ -24,6 +25,7 @@ const hitComponents = {
 
 const Hits = (props: Props) => {
   const searchConfig = useSearchConfig();
+  const config = useRuntimeConfig();
   const { items } = useHits();
   const { t } = useContext(TranslationContext);
   const [manifestUrl, setManifestUrl] = useState<string | null>(null);
@@ -121,8 +123,8 @@ const Hits = (props: Props) => {
   }, [items, t, searchConfig]);
 
   const isLinkable = useMemo(
-    () => hasDetailPage(searchConfig.route.slice(1) as Models),
-    [searchConfig.route]
+    () => hasDetailPage(searchConfig.route.slice(1) as Models, config),
+    [searchConfig.route, config]
   );
 
   const renderItem = useCallback((item: any) => {

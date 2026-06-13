@@ -50,7 +50,7 @@ const Event = (props: Props) => {
    * Resolves the URL for the detail page.
    */
   const resolveDetailPageUrl = useCallback((event) => {
-    if (event && hasDetailPage('events')) {
+    if (event && hasDetailPage('events', config)) {
       return `/${lang}/events/${event.uuid}`;
     }
   }, [lang]);

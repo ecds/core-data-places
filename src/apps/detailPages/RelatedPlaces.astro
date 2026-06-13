@@ -3,6 +3,7 @@ import PlaceMap from '@apps/detailPages/PlaceMap';
 import { getTranslations } from '@backend/i18n';
 import { Icon } from '@performant-software/core-data/ssr';
 import ServiceFactory from '@services/coreData/factory';
+import { getAtlasConfig } from '@atlas/server';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { getRelatedGeometry, groupRelationships } from '@utils/detailPages';
 
@@ -20,7 +21,7 @@ const { places } = await service.getRelatedPlaces(uuid);
 const relationships = groupRelationships(places, excludes);
 const { t } = await getTranslations(lang);
 
-const showLinks = hasDetailPage('places');
+const showLinks = hasDetailPage('places', getAtlasConfig());
 const resolveDetailUrl = (record: any) => `/${lang}/places/${record.uuid}`;
 ---
 {Object.keys(relationships).map((uuid) => (

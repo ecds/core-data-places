@@ -2,6 +2,7 @@
 import RelatedSource from '@apps/detailPages/RelatedSource.astro';
 import { getTranslations } from '@backend/i18n';
 import ServiceFactory from '@services/coreData/factory';
+import { getAtlasConfig } from '@atlas/server';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { getRelationshipFields, groupRelationships } from '@utils/detailPages';
 
@@ -22,7 +23,7 @@ const { t } = await getTranslations(lang);
 const fields = getRelationshipFields('works', t)
 
 const resolveDetailUrl = (work: any) => `/${lang}/works/${work.uuid}`;
-const showLinks = hasDetailPage('works');
+const showLinks = hasDetailPage('works', getAtlasConfig());
 ---
 {Object.keys(relationships).map((uuid) => (
   <div class='py-8 w-full'>

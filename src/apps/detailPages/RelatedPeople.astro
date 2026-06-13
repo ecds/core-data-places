@@ -2,6 +2,7 @@
 import ServiceFactory from '@services/coreData/factory';
 import { getTranslations } from '@backend/i18n';
 import Relations from '@apps/detailPages/Relations.astro';
+import { getAtlasConfig } from '@atlas/server';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { groupRelationships } from '@utils/detailPages';
 import { getNameView } from '@utils/people';
@@ -27,7 +28,7 @@ const { t } = await getTranslations(lang);
     label={t(uuid)}
     resolveDetailUrl={(person) => `/${lang}/people/${person.uuid}`}
     resolveName={person => getNameView(person)}
-    showLinks={hasDetailPage('people')}
+    showLinks={hasDetailPage('people', getAtlasConfig())}
     uuid={uuid}
   />
 ))}

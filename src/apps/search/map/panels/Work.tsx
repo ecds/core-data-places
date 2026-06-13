@@ -17,7 +17,7 @@ const Work = (props: Props) => {
    * Resolves the URL for the detail page.
    */
   const resolveDetailPageUrl = useCallback((work) => {
-    if (work && hasDetailPage('works')) {
+    if (work && hasDetailPage('works', config)) {
       return `/${lang}/works/${work.uuid}`;
     }
   }, [lang]);

@@ -1,5 +1,6 @@
 import ServiceFactory from '@services/coreData/factory';
 import { CoreData as CoreDataUtils } from '@performant-software/core-data/ssr';
+import { getAtlasConfig } from '@atlas/server';
 import config from '@config' with { type: 'json' };
 import type { Models } from '@types';
 import { hasDetailPage } from '@utils/detailPagePaths';
@@ -7,7 +8,8 @@ import { hasDetailPage } from '@utils/detailPagePaths';
 export const getDetailPagePaths = async (model: Models) => {
   let routes = [];
 
-  if (hasDetailPage(model)) {
+  // Build-time path generation uses the static defaults superset.
+  if (hasDetailPage(model, config)) {
     return routes;
   }
 
@@ -54,8 +56,13 @@ export const getRelatedGeometry = (places?: any[]) => {
 }
 
 export const getRelationshipFields = (model: Models, t: any) => {
-  if (config.detail_pages?.relationship_fields) {
-    return (config.detail_pages.relationship_fields[model] || []).map(uuid => ({
+  // Per request: the CURRENT atlas's relationship-field config (this is called
+  // only from server-rendered detail-page islands). Reading the static @config
+  // here made every atlas use the default (which has none).
+  const relationshipFields = getAtlasConfig().detail_pages?.relationship_fields;
+
+  if (relationshipFields) {
+    return (relationshipFields[model] || []).map(uuid => ({
       label: t(uuid),
       uuid: uuid
     }));

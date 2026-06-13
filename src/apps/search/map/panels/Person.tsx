@@ -25,7 +25,7 @@ const Person = (props: Props) => {
    * Resolves the URL for the detail page.
    */
   const resolveDetailPageUrl = useCallback((person) => {
-    if (person && hasDetailPage('people')) {
+    if (person && hasDetailPage('people', config)) {
       return `/${lang}/people/${person.uuid}`;
     }
   }, [lang]);

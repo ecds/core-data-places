@@ -2,6 +2,7 @@
 import RelatedEvent from '@apps/detailPages/RelatedEvent.astro';
 import { getTranslations } from '@backend/i18n';
 import ServiceFactory from '@services/coreData/factory';
+import { getAtlasConfig } from '@atlas/server';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { getRelationshipFields, groupRelationships } from '@utils/detailPages';
 import _ from 'underscore';
@@ -24,7 +25,7 @@ const { t } = await getTranslations(lang);
 const fields = getRelationshipFields('events', t);
 
 const resolveDetailUrl = (event: any) => `/${lang}/events/${event.uuid}`;
-const showLinks = hasDetailPage('events');
+const showLinks = hasDetailPage('events', getAtlasConfig());
 ---
 {Object.keys(relationships).map((uuid) => (
   <div class='py-8 w-full'>

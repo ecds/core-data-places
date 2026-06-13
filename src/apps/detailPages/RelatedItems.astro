@@ -2,6 +2,7 @@
 import RelatedSource from '@apps/detailPages/RelatedSource.astro';
 import { getTranslations } from '@backend/i18n';
 import ServiceFactory from '@services/coreData/factory';
+import { getAtlasConfig } from '@atlas/server';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { getRelationshipFields, groupRelationships } from '@utils/detailPages';
 
@@ -35,7 +36,7 @@ const resolveDetailUrl = (item: any, uuid: string) => {
   return `/${lang}/items/${item.uuid}`;
 };
 
-const showLinks = (uuid: string) => resourceField?.startsWith(uuid) || hasDetailPage('items');
+const showLinks = (uuid: string) => resourceField?.startsWith(uuid) || hasDetailPage('items', getAtlasConfig());
 ---
 {Object.keys(relationships).map((uuid) => (
   <div class='py-8 w-full'>
