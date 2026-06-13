@@ -1,13 +1,10 @@
 import { defineConfig, LocalAuthProvider } from 'tinacms';
 import _ from 'underscore';
 import config from '../public/config.json';
-import Branding from './content/branding';
 import I18n from './content/i18n';
-import Navbar from './content/navbar';
 import PagesCollection from './content/pages';
 import PathsCollection from './content/paths';
 import PostsCollection from './content/posts';
-import Settings from './content/settings';
 import { ClerkAuthProvider } from './auth-provider';
 import { Clerk } from '@clerk/clerk-js';
 
@@ -54,8 +51,12 @@ export default defineConfig({
   },
   // See docs on content modeling for more info on how to setup new content models: https://tina.io/docs/schema/
   schema: {
+    // Branding, navigation, and settings are no longer TinaCMS collections:
+    // they are console-owned and emitted into the content tree at build
+    // (branding.json, navbar/<locale>.json, and the public config.json the
+    // frontend reads via @config). TinaCMS now edits longform content only —
+    // pages, posts, paths, and i18n strings.
     collections: _.compact([
-      Branding,
       PagesCollection,
       config.content?.collections?.includes('paths')
         ? PathsCollection
@@ -63,9 +64,7 @@ export default defineConfig({
       config.content?.collections?.includes('posts')
         ? PostsCollection
         : undefined,
-      I18n,
-      Navbar,
-      Settings
+      I18n
     ])
   }
 });

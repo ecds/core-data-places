@@ -1,6 +1,8 @@
 import { getUserRoleAsync } from './utils/getUserRole';
 
-const ADMIN_ONLY_COLLECTIONS = ['Settings', 'Branding', 'Internationalization', 'Navbar', 'Pages'];
+// Settings, Branding, and Navbar are no longer TinaCMS collections (now
+// console-owned), so they're dropped from the admin-only list.
+const ADMIN_ONLY_COLLECTIONS = ['Internationalization', 'Pages'];
 
 /**
  * Apply role-based UI restrictions to the TinaCMS admin.

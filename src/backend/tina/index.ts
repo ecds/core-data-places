@@ -1,14 +1,19 @@
 import client from '@tina/databaseClient';
 import { fetchOne, filterAll } from './i18n';
 
-export const fetchBranding = async () => {
-  if (!client.queries.branding) {
-    return null;
-  }
+// Branding and navigation are console-owned: the publishing console emits them
+// as JSON into the content tree at build (content/branding/branding.json and
+// content/navbar/<locale>.json) and they are read directly here, not through
+// TinaCMS. import.meta.glob bundles the files at build time and resolves in
+// both `astro dev` and the static build; a missing file degrades gracefully
+// (branding falls back to {} so the CSS defaults apply; navbar falls back to
+// null so Header/Footer use getDefaultNavbar).
+const brandings = import.meta.glob('../../../content/branding/*.json', { eager: true, import: 'default' }) as Record<string, any>;
+const navbars = import.meta.glob('../../../content/navbar/*.json', { eager: true, import: 'default' }) as Record<string, any>;
 
-  const response = await client.queries.branding({ relativePath: 'branding.json' });
-  return response.data?.branding;
-}
+export const fetchBranding = async (): Promise<any> => (
+  brandings['../../../content/branding/branding.json'] ?? {}
+);
 
 export const fetchI18n = async (language: string) => {
   if (!client.queries.i18n) {
@@ -28,14 +33,9 @@ export const fetchI18ns = async () => {
   return response.data?.i18nConnection?.edges?.map((item) => item?.node);
 };
 
-export const fetchNavbar = async (language: string) => {
-  if (!client.queries.navbar) {
-    return null;
-  }
-  
-  const response = await client.queries.navbar({ relativePath: `${language}.json` });
-  return response.data?.navbar;
-}
+export const fetchNavbar = async (language: string): Promise<any> => (
+  navbars[`../../../content/navbar/${language}.json`] ?? null
+);
 
 export const fetchPage = async (locale: string, slug: string) => {
   if (!client.queries.pages) {
