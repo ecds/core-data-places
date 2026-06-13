@@ -1,0 +1,100 @@
+# Open Geographies — SSR renderer deploy (ECR build/push → ECS Fargate)
+#
+# SAFETY: manual-only. There is no `on: push` trigger, so a commit to the fork
+# never deploys anything. It runs only when someone clicks "Run workflow" and
+# picks an environment, and the `environment:` key below lets Emory attach
+# required-reviewer / branch-protection rules to `production`. Until the GitHub
+# environments, repo variables, and the AWS OIDC role exist (see deploy/README.md
+# and the parent repo's deploy-templates/), this workflow is an inert template.
+
+name: Deploy renderer
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        required: true
+        default: staging
+        options:
+          - staging
+          - production
+      image_tag:
+        description: "Image tag to build & deploy (default: commit SHA)"
+        type: string
+        required: false
+
+concurrency:
+  group: deploy-renderer-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write   # request the OIDC token used to assume the AWS role
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    # Binds to a GitHub Environment so protection rules (required reviewers,
+    # wait timer) gate production. Create "staging" and "production" environments
+    # in repo settings and set the vars below per environment.
+    environment: ${{ inputs.environment }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}          # e.g. og-renderer
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}                # e.g. og-cluster
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}                # e.g. og-renderer-staging
+      TASK_DEF_PATH: deploy/ecs-task-def.renderer.json
+      CONTAINER_NAME: renderer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: tag
+        run: echo "value=${{ inputs.image_tag || github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          set -euo pipefail
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          # linux/amd64 to match the X86_64 task-definition runtimePlatform.
+          docker build --platform linux/amd64 -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Render task definition (inject image)
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.TASK_DEF_PATH }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build.outputs.image }}
+
+      - name: Deploy to ECS (rolling, wait for stability)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          # ROLLBACK: ECS retains prior task-definition revisions. To roll back,
+          # re-run this workflow with a known-good `image_tag`, or:
+          #   aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE \
+          #     --task-definition og-renderer:<PREVIOUS_REVISION>
