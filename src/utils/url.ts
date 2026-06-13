@@ -34,13 +34,27 @@ export const convertToNumber = (str) => {
 };
 
 /**
- * Returns the referer URL on the passed headers.
+ * Returns the referer URL on the passed headers, or null when there is no
+ * valid referer. Header/Footer render as server:defer islands whose sub-request
+ * may carry no Referer (direct navigation, privacy modes, prerender, bots) —
+ * an unguarded `new URL(null)` there throws "Invalid URL" and 500s the whole
+ * chrome. Callers treat null as "no active path" (nav still renders, just
+ * without active-item highlighting).
  *
  * @param headers
  */
-export const getCurrentURL = (headers: Headers): URL => {
+export const getCurrentURL = (headers: Headers): URL | null => {
   const referer = headers.get(HEADER_REFERER);
-  return new URL(referer);
+
+  if (!referer) {
+    return null;
+  }
+
+  try {
+    return new URL(referer);
+  } catch {
+    return null;
+  }
 };
 
 /**

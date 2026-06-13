@@ -1,5 +1,6 @@
 import mdx from '@astrojs/mdx';
 import netlify from '@astrojs/netlify';
+import node from '@astrojs/node';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
@@ -9,6 +10,11 @@ import config from './public/config.json';
 
 const { locales, default_locale: defaultLocale } = config.i18n;
 const { STATIC_BUILD } = loadEnv(process.env.STATIC_BUILD, process.cwd(), '');
+
+// The Open Geographies platform deploys the server build to its own
+// self-hosted SSR runtime (a standalone Node server), so SSR_ADAPTER=node
+// selects the Node adapter. The default keeps upstream's Netlify adapter.
+const useNodeAdapter = process.env.SSR_ADAPTER === 'node';
 
 // https://astro.build/config
 export default defineConfig({
@@ -20,7 +26,7 @@ export default defineConfig({
     }
   },
   output: STATIC_BUILD === 'true' ? 'static' : 'server',
-  adapter: netlify(),
+  adapter: useNodeAdapter ? node({ mode: 'standalone' }) : netlify(),
   integrations: [mdx(), sitemap(), react()],
   vite: {
     optimizeDeps: {
