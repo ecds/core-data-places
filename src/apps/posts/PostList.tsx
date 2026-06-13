@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchPosts } from '@backend/api/posts';
 import { Button } from '@performant-software/core-data';
 import { useTranslations } from '@i18n/useTranslations';
-import config from '@config';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import Cards from '@components/Cards';
@@ -13,17 +12,18 @@ import { getRelativeLocaleUrl } from 'astro:i18n';
 
 interface Props {
   lang: string;
-  sort?: {
-    name: string;
-    direction?: 'asc' | 'desc';
-  };
+  // The atlas's `content.posts_config` (layout, categories, sort_by), resolved
+  // per request on the server and passed in — the renderer is multi-tenant, so
+  // this can't be read from a baked build-time config.
+  config?: any;
 }
 
 const PER_PAGE = 25;
 
 const PostList = (props: Props) => {
   const { t } = useTranslations();
-  const { sort, lang } = props;
+  const { config, lang } = props;
+  const sort = config?.sort_by;
 
   const [cursor, setCursor] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -66,7 +66,7 @@ const PostList = (props: Props) => {
     onLoadPosts();
   }, [category]);
 
-  const layout = config.content?.posts_config?.layout || 'list';
+  const layout = config?.layout || 'list';
 
   return (
     <div>
@@ -79,7 +79,7 @@ const PostList = (props: Props) => {
           )}
         </h1>
         {
-          config.content?.posts_config?.categories && ( 
+          config?.categories && (
             <div className='flex flex-row gap-4 items-center'>
               <Listbox value={category} onChange={setCategory}>
                 <ListboxButton className='min-w-[250px] h-12 bg-white rounded-md px-4.5 py-2.5 flex flex-row justify-between items-center'>
@@ -92,7 +92,7 @@ const PostList = (props: Props) => {
                   <ListboxOption key='all' value={null} className='data-focus:bg-gray-100 px-4 py-2 text-sm cursor-pointer'>
                     { t('all') }
                   </ListboxOption>
-                  { _.map(config.content?.posts_config?.categories, (cat) => (
+                  { _.map(config?.categories, (cat) => (
                     <ListboxOption key={cat} value={cat} className='data-focus:bg-gray-100 px-4 py-2 text-sm cursor-pointer'>
                       {cat}
                     </ListboxOption>

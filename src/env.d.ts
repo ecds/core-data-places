@@ -1,6 +1,13 @@
 /// <reference path="../.astro/types.d.ts" />
 /// <reference types="astro/client" />
 
+declare namespace App {
+  interface Locals {
+    // The atlas resolved by slug for this request (see src/middleware.ts).
+    atlas: import('./atlas/types').AtlasBundle;
+  }
+}
+
 declare module '@performant-software/core-data';
 declare module '@performant-software/core-data/ssr';
 declare module '@performant-software/core-data/types/types/typesense';

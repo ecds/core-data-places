@@ -1,0 +1,77 @@
+---
+/**
+ * Renders a WordPress document's rendered HTML (`content.rendered`) with baseline
+ * longform typography. Shared by the standalone page route (Page.astro) and the
+ * per-record detail integration (WordPressContent.astro). Renders nothing when
+ * there is no content, so callers can mount it unconditionally.
+ */
+interface Props {
+  content?: string | null;
+}
+
+const { content } = Astro.props;
+---
+
+{ content && (
+  <div class='py-6'>
+    <div
+      class='wp-content max-w-none'
+      set:html={content}
+    />
+  </div>
+) }
+
+<style is:global>
+  .wp-content {
+    line-height: 1.7;
+  }
+
+  .wp-content h1,
+  .wp-content h2,
+  .wp-content h3,
+  .wp-content h4 {
+    font-weight: 600;
+    margin: 1.25em 0 0.5em;
+  }
+
+  .wp-content h1 { font-size: 1.5rem; }
+  .wp-content h2 { font-size: 1.3rem; }
+  .wp-content h3 { font-size: 1.15rem; }
+
+  .wp-content p {
+    margin: 0.75em 0;
+  }
+
+  .wp-content a {
+    text-decoration: underline;
+  }
+
+  .wp-content ul,
+  .wp-content ol {
+    margin: 0.75em 0;
+    padding-left: 1.5em;
+  }
+
+  .wp-content ul { list-style: disc; }
+  .wp-content ol { list-style: decimal; }
+
+  .wp-content blockquote {
+    border-left: 3px solid #e5e5e5;
+    margin: 1em 0;
+    padding-left: 1em;
+  }
+
+  .wp-content figure {
+    margin: 1.25em 0;
+  }
+
+  .wp-content figure img {
+    height: auto;
+    max-width: 100%;
+  }
+
+  .wp-content figcaption {
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+</style>

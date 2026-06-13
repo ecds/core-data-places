@@ -4,10 +4,7 @@ import PathList from '@apps/paths/PathList';
 
 interface Props {
   lang: string;
-  sort?: {
-    name: string;
-    direction?: 'asc' | 'desc';
-  };
+  config?: any;
 }
 
 const Paths = (props: Props) => {
@@ -18,7 +15,7 @@ const Paths = (props: Props) => {
       value={{ lang: props.lang, t }}
     >
       <PathList
-        sort={props.sort}
+        config={props.config}
         lang={props.lang}
       />
     </TranslationContext.Provider>

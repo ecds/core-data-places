@@ -11,9 +11,10 @@
     "outDir": "dist",
     "paths": {
       "@apps/*": ["src/apps/*"],
+      "@atlas/*": ["src/atlas/*"],
       "@backend/*": ["src/backend/*"],
       "@components/*": ["src/components/*"],
-      "@config": ["public/config.json"],
+      "@config": ["src/config.defaults.json"],
       "@contexts/*": ["src/contexts/*"],
       "@i18n/*": ["src/i18n/*"],
       "@layouts/*": ["src/layouts/*"],
@@ -22,7 +23,6 @@
       "@services/*": ["src/services/*"],
       "@store/*": ["src/store/*"],
       "@styles/*": ["src/styles/*"],
-      "@tina/*": ["tina/__generated__/*"],
       "@types": ["src/types.ts"],
       "@utils/*": ["src/utils/*"],
       "@visualizations/*": ["src/visualizations/*"]

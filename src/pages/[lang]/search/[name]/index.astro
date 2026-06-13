@@ -1,6 +1,7 @@
 ---
 import ListSearch from '@apps/search/list/ListSearch';
 import MapSearch from '@apps/search/map/MapSearch';
+import { getAtlasConfig } from '@atlas/server';
 import config from '@config';
 import Layout from '@layouts/Layout.astro';
 import { SearchConfig } from '@types';
@@ -9,8 +10,10 @@ import _ from 'underscore';
 
 const { lang, name } = Astro.params;
 
-const searchConfig = config.search.find((s) => s.name === name) as SearchConfig;
-const isListSearch = !!searchConfig.type && searchConfig.type !== 'map';
+// The search list is resolved per request from the current atlas's config
+// (the client search island re-reads it from the dynamic /config.json).
+const searchConfig = getAtlasConfig().search?.find((s) => s.name === name) as SearchConfig;
+const isListSearch = !!searchConfig?.type && searchConfig.type !== 'map';
 
 export const getStaticPaths = () => {
   const paths = [];

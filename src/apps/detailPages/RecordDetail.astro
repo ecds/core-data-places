@@ -17,7 +17,7 @@ import RelatedWorks from '@apps/detailPages/RelatedWorks.astro';
 import UserDefined from '@apps/detailPages/UserDefined.astro';
 import WordPressContent from '@apps/detailPages/WordPressContent.astro';
 import { getTranslations } from '@backend/i18n';
-import config from '@config';
+import { getAtlasConfig } from '@atlas/server';
 
 interface Props {
   excludes: string[];
@@ -31,16 +31,16 @@ interface Props {
 const { excludes, geometry, lang, model, name, record } = Astro.props;
 const { t } = await getTranslations(lang);
 
-const manifest = config.detail_pages?.models[model]
-  ? config.detail_pages?.models[model].related_manifest
+const manifest = getAtlasConfig().detail_pages?.models[model]
+  ? getAtlasConfig().detail_pages?.models[model].related_manifest
   : null;
 
-const ecViewer = config.detail_pages?.models[model]
-  ? config.detail_pages?.models[model].editioncrafter_config
+const ecViewer = getAtlasConfig().detail_pages?.models[model]
+  ? getAtlasConfig().detail_pages?.models[model].editioncrafter_config
   : null;
 
-const resourceField = config.detail_pages?.models[model]
-  ? config.detail_pages?.models[model].resources_field
+const resourceField = getAtlasConfig().detail_pages?.models[model]
+  ? getAtlasConfig().detail_pages?.models[model].resources_field
   : null;
 
 let transcriptionTypes = {};

@@ -1,11 +1,13 @@
 ---
 import Posts from '@apps/posts/Posts';
 import Container from '@components/Container.astro';
+import { getAtlasConfig } from '@atlas/server';
 import config from '@config';
 import Layout from '@layouts/Layout.astro';
 import { hasPostsContent } from '@utils/config';
 import _ from 'underscore';
 
+// Build-time only (not called in SSR); the static defaults seed any prerender.
 export const getStaticPaths = () => {
   if (!hasPostsContent(config)) {
     return [];
@@ -13,6 +15,9 @@ export const getStaticPaths = () => {
 
   return _.map(config.i18n.locales, (lang: string) => ({ params: { lang }}));
 }
+
+// Per-request: the current atlas's posts config (layout, categories, sort_by).
+const postsConfig = getAtlasConfig().content?.posts_config;
 
 ---
 
@@ -25,7 +30,7 @@ export const getStaticPaths = () => {
   >
     <Posts
       lang={Astro.currentLocale}
-      sort={config.content?.posts_config?.sort_by}
+      config={postsConfig}
       client:only='react'
     />
   </Container>

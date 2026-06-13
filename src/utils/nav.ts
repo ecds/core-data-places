@@ -1,6 +1,4 @@
-import { getTranslations } from '@backend/i18n';
-import { fetchNavbar, fetchPages } from '@backend/tina';
-import config from '@config';
+import { getAtlasConfig } from '@atlas/server';
 import { Navbar, NavbarItem } from '@types';
 import { STATIC_BUILD } from 'astro:env/client';
 import { getRelativeLocaleUrl } from 'astro:i18n';
@@ -9,22 +7,21 @@ import _ from 'underscore';
 /**
  * Returns the first page flagged as "home_page".
  *
+ * Standalone pages move to the user's WordPress / console (migration step 2),
+ * so there is no Tina home page to resolve yet. Returns undefined until then.
+ *
  * @param locale
  */
-export const getHomepage = async (locale: string) => {
-  const pages = await fetchPages(locale, { filter: { home_page: { eq: true } } });
-  const [page, ] = pages;
-
-  return page;
-};
+export const getHomepage = async (_locale: string) => undefined;
 
 /**
  * Returns the set of all non-homepage pages.
+ *
+ * Pages are no longer sourced from TinaCMS (which hangs the SSR runtime without
+ * a datalayer); they become console/WordPress-owned in migration step 2. Until
+ * then this is empty, and the navbar comes from the console navigation bundle.
  */
-export const getPages = async (locale: string) => {
-  const pages = await fetchPages(locale, { filter: { nav_bar: { eq: true } } });
-  return _.filter(pages, (page) => !page.home_page);
-};
+export const getPages = async (_locale: string): Promise<any[]> => [];
 
 /**
  * Transforms the custom navbar into an array of nav items.
@@ -53,6 +50,8 @@ export const getCustomNavbar = (navbar: Navbar, locale: string, pathname: string
  * @param t
  */
 export const getDefaultNavbar = (pages: any, locale: string, pathname: string, t: any) => {
+  const config = getAtlasConfig();
+
   const NavKeys = {
     gallery: 'gallery',
     search: 'search',

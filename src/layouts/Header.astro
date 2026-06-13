@@ -1,6 +1,6 @@
 ---
 import { getTranslations } from '@backend/i18n';
-import { fetchNavbar } from '@backend/tina';
+import { getAtlasNavigation } from '@atlas/server';
 import LanguagePicker from '@components/LanguagePicker';
 import MobileHeader from '@components/MobileHeader';
 import NavBar from '@layouts/NavBar.astro';
@@ -21,11 +21,13 @@ const {
   transparent
 } = Astro.props;
 
-const [{ t }, navbar, pages] = await Promise.all([
+const [{ t }, pages] = await Promise.all([
   getTranslations(currentLocale),
-  fetchNavbar(currentLocale),
   getPages(currentLocale)
 ]);
+
+// Navigation is console-owned (the atlas bundle), resolved per request.
+const navbar = getAtlasNavigation();
 
 let items;
 

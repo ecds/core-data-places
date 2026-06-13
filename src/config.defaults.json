@@ -1,0 +1,30 @@
+{
+  "content": {
+    "collections": [
+      "posts"
+    ]
+  },
+  "core_data": {
+    "url": "http://localhost:3001",
+    "project_ids": []
+  },
+  "i18n": {
+    "default_locale": "en",
+    "locales": [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "it",
+      "pt"
+    ]
+  },
+  "layers": [
+    {
+      "name": "OpenStreetMap",
+      "layer_type": "raster",
+      "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    }
+  ],
+  "search": []
+}

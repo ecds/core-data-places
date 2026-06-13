@@ -1,4 +1,4 @@
-import config from '@config' with { type: 'json' };
+import { getAtlasConfig } from '@atlas/server';
 import { hasContentCollection } from '@root/src/content.config';
 import { getCollection, getEntry } from 'astro:content';
 import _ from 'underscore';
@@ -15,7 +15,7 @@ const REQUEST_PARAMS = {
 class Base {
   name: string;
   param: string;
-  service: any;
+  Service: any;
 
   /**
    * Constructs a new service.
@@ -27,7 +27,20 @@ class Base {
   constructor(name, param, Service) {
     this.name = name;
     this.param = param;
-    this.service = new Service(config.core_data.url, config.core_data.project_ids);
+    this.Service = Service;
+  }
+
+  /**
+   * A Core Data service bound to the CURRENT request's atlas. The renderer is
+   * multi-tenant — core_data.url / project_ids are resolved per request from
+   * the atlas bundle (AsyncLocalStorage), not baked at module load — so the
+   * underlying service is built per access rather than once in the
+   * constructor. (Services are module singletons; binding the URL here keeps
+   * them request-correct.)
+   */
+  get service() {
+    const coreData = getAtlasConfig()?.core_data ?? {};
+    return new this.Service(coreData.url, coreData.project_ids);
   }
 
   /**

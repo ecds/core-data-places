@@ -1,14 +1,17 @@
 ---
-import { TinaMarkdown } from 'tinacms/dist/rich-text';
-import LinkButton from '@components/LinkButton';
-import Spacer from '@components/Spacer';
-
+// Longform rich text. TinaCMS (its <TinaMarkdown> renderer) was removed in
+// migration step 3; longform moves to the user's WordPress in step 2 and
+// arrives as HTML. This now renders an HTML string when one is provided (the
+// WordPress shape) and nothing for the legacy Tina rich-text block shape —
+// keeping the page-builder components (Banner / FreeText / ColumnContent) that
+// use it building until step 2 wires the WordPress reads.
 const { content } = Astro.props;
 
-const components = {
-  button: LinkButton,
-  spacer: Spacer
-}
-
+const html = typeof content === 'string' ? content : null;
 ---
-<TinaMarkdown content={content} components={components} />
+{ html && (
+  <div
+    class='rich-text max-w-none'
+    set:html={html}
+  />
+) }

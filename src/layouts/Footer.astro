@@ -1,10 +1,9 @@
 ---
 import { getTranslations } from '@backend/i18n';
-import { fetchNavbar } from '@backend/tina';
+import { getAtlasConfig, getAtlasNavigation } from '@atlas/server';
 import Container from '@components/Container.astro';
 import LinkButton from '@components/LinkButton';
 import MultiColumnContent from '@components/MultiColumnContent.astro';
-import config from '@config';
 import NavBar from '@layouts/NavBar.astro';
 import { getCustomNavbar, getDefaultNavbar, getPages } from '@utils/nav';
 import { toBackgroundClass } from '@utils/pageBuilder';
@@ -28,11 +27,14 @@ const year = new Date().getFullYear();
 const currentLocale = Astro.currentLocale;
 const currentUrl = getCurrentURL(Astro.request.headers);
 
-const [{ t }, navbar, pages] = await Promise.all([
+const [{ t }, pages] = await Promise.all([
   getTranslations(currentLocale),
-  fetchNavbar(currentLocale),
   getPages(currentLocale)
 ]);
+
+// Navigation + config are console-owned (the atlas bundle), resolved per request.
+const navbar = getAtlasNavigation();
+const config = getAtlasConfig();
 
 let items;
 
@@ -102,13 +104,6 @@ setCacheControl(Astro.response.headers);
             className='w-[200px] justify-center'
             content={t('coreDataLogin')}
             href={config.core_data.url}
-            color='secondary'
-            target='_blank'
-          />
-          <LinkButton
-            className='w-[200px] justify-center'
-            content={t('tinaLogin')}
-            href='/admin/index.html'
             color='secondary'
             target='_blank'
           />

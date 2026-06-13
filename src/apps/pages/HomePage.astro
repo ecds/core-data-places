@@ -1,24 +1,60 @@
 ---
-import PageBody from '@components/PageBody.astro';
+import { getAtlasBranding, getAtlasConfig } from '@atlas/server';
+import { fetchWordPressDocument } from '@backend/wordpress';
+import Container from '@components/Container.astro';
 import PageStoreProvider from '@components/PageStoreProvider';
-import { getHomepage } from '@utils/nav';
+import WordPressBody from '@components/WordPressBody.astro';
 import { setCacheControl } from '@utils/url';
 
-const locale = Astro.currentLocale;
-const page = await getHomepage(locale);
+/**
+ * The atlas landing page: a console-owned hero (the atlas title + an optional
+ * tagline from `config.home.tagline`) over an optional WordPress body
+ * (`config.home.wordpress_slug`, fetched from `config.wordpress.host`). This
+ * replaces the old TinaCMS home-page builder (migration step 2). With no home
+ * config the hero alone renders, so a freshly provisioned atlas still has a
+ * sensible landing page.
+ */
+const branding = getAtlasBranding();
+const home = getAtlasConfig().home ?? {};
+const wordpressHost = getAtlasConfig().wordpress?.host;
+
+const body = home.wordpress_slug
+  ? await fetchWordPressDocument({ host: wordpressHost, resource: 'pages', value: home.wordpress_slug })
+  : null;
 
 setCacheControl(Astro.response.headers);
-
 ---
 
-<PageBody
-  sections={page?.sections}
-  transparent={page?.transparent}
-  home={page?.home_page}
-/>
+<section
+  class='bg-primary w-full py-20'
+>
+  <div
+    class='flex flex-col items-center text-center gap-4 px-8'
+  >
+    <h1
+      class='font-header text-4xl md:text-5xl'
+    >
+      { branding.title }
+    </h1>
+    { home.tagline && (
+      <p
+        class='text-lg md:text-xl max-w-2xl'
+      >
+        { home.tagline }
+      </p>
+    )}
+  </div>
+</section>
+
+{ body?.content && (
+  <Container
+    className='py-12 w-full'
+  >
+    <WordPressBody content={body.content} />
+  </Container>
+)}
 
 <PageStoreProvider
-  title={page.title}
-  transparent={page.transparent}
+  title={branding.title}
   client:load
 />

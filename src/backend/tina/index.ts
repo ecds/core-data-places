@@ -1,122 +1,49 @@
-import client from '@tina/databaseClient';
-import { fetchOne, filterAll } from './i18n';
+/**
+ * Content backend — TinaCMS removed (migration step 3, "drop Tina").
+ *
+ * These functions used to read branding, navigation, i18n strings, and longform
+ * (pages / posts / paths) from TinaCMS via a datalayer/MongoDB. That whole tier
+ * is gone:
+ *   - branding + navigation are console-owned and resolved per request from the
+ *     atlas bundle (see @atlas/server); callers moved off these months-equivalent
+ *     of work ago (Layout/Header/Footer).
+ *   - i18n strings become console-owned (migration step 2).
+ *   - standalone pages / posts / paths (longform) move to the user's WordPress,
+ *     fetched via the WP REST API (migration step 2 — WordPressContent.astro is
+ *     the existing pattern).
+ *
+ * Until step 2 wires those reads, every function returns an empty/`null` value
+ * so the routes that still call them degrade (render nothing / 404) instead of
+ * importing Tina (which hung the SSR runtime at startup). No `@tina/*` /
+ * `tinacms` / `mongodb` imports remain anywhere in the app.
+ */
 
-// Branding and navigation are console-owned: the publishing console emits them
-// as JSON into the content tree at build (content/branding/branding.json and
-// content/navbar/<locale>.json) and they are read directly here, not through
-// TinaCMS. import.meta.glob bundles the files at build time and resolves in
-// both `astro dev` and the static build; a missing file degrades gracefully
-// (branding falls back to {} so the CSS defaults apply; navbar falls back to
-// null so Header/Footer use getDefaultNavbar).
-const brandings = import.meta.glob('../../../content/branding/*.json', { eager: true, import: 'default' }) as Record<string, any>;
-const navbars = import.meta.glob('../../../content/navbar/*.json', { eager: true, import: 'default' }) as Record<string, any>;
+export const fetchBranding = async (): Promise<any> => ({});
 
-export const fetchBranding = async (): Promise<any> => (
-  brandings['../../../content/branding/branding.json'] ?? {}
-);
+export const fetchNavbar = async (_language: string): Promise<any> => null;
 
-export const fetchI18n = async (language: string) => {
-  if (!client.queries.i18n) {
-    return null;
-  }
+export const fetchI18n = async (_language: string): Promise<any> => null;
 
-  const response = await client.queries.i18n({ relativePath: `${language}.json` });
-  return response.data?.i18n;
-};
+export const fetchI18ns = async (): Promise<any[]> => [];
 
-export const fetchI18ns = async () => {
-  if (!client.queries.i18nConnection) {
-    return null;
-  }
+export const fetchPage = async (_locale: string, _slug: string): Promise<any> => null;
 
-  const response = await client.queries.i18nConnection();
-  return response.data?.i18nConnection?.edges?.map((item) => item?.node);
-};
+export const fetchPages = async (_locale: string, _params?: any): Promise<any[]> => [];
 
-export const fetchNavbar = async (language: string): Promise<any> => (
-  navbars[`../../../content/navbar/${language}.json`] ?? null
-);
+export const fetchPath = async (_slug: string): Promise<any> => null;
 
-export const fetchPage = async (locale: string, slug: string) => {
-  if (!client.queries.pages) {
-    return null;
-  }
+export const fetchPathResponse = async (_slug: string): Promise<any> => null;
 
-  const response = await fetchOne(locale, slug, client.queries.pages);
+export const fetchPaths = async (_params: any = {}): Promise<{ metadata: any; paths: any[] }> => ({
+  metadata: null,
+  paths: []
+});
 
-  return response.data?.pages;
-};
+export const fetchPost = async (_slug: string): Promise<any> => null;
 
-export const fetchPages = async (locale: string, params?: any) => {
-  if (!client.queries.pagesConnection) {
-    return null;
-  }
+export const fetchPostResponse = async (_slug: string): Promise<any> => null;
 
-  const response = await client.queries.pagesConnection(params);
-  const pages = response.data?.pagesConnection?.edges?.map((item) => item?.node);
-
-  return filterAll(locale, pages);
-};
-
-export const fetchPath = async (slug: string) => {
-  if (!client.queries.path) {
-    return null;
-  }
-
-  const response = await client.queries.path({ relativePath: `${slug}.mdx`});
-  return response.data?.path;
-};
-
-export const fetchPathResponse = async (slug: string) => {
-  if (!client.queries.path) {
-    return null;
-  }
-
-  const response = await client.queries.path({ relativePath: `${slug}.mdx`});
-  return response;
-};
-
-export const fetchPaths = async (params = {}) => {
-  if (!client.queries.pathConnection) {
-    return null;
-  }
-
-  const response = await client.queries.pathConnection(params);
-
-  return {
-    metadata: response.data?.pathConnection?.pageInfo,
-    paths: response.data?.pathConnection?.edges?.map((item) => item?.node)
-  }
-};
-
-export const fetchPost = async (slug: string) => {
-  if (!client.queries.post) {
-    return null;
-  }
-
-  const response = await client.queries.post({ relativePath: `${slug}.mdx`});
-  return response.data?.post;
-};
-
-export const fetchPostResponse = async (slug: string) => {
-  if (!client.queries.post) {
-    return null;
-  }
-
-  const response = await client.queries.post({ relativePath: `${slug}.mdx`});
-  return response;
-}
-
-export const fetchPosts = async (params = {}) => {
-  if (!client.queries.postConnection) {
-    return null;
-  }
-
-  const response = await client.queries.postConnection(params);
-
-  return {
-    metadata: response.data?.postConnection?.pageInfo,
-    posts: response.data?.postConnection?.edges?.map((item) => item?.node)
-  }
-};
-
+export const fetchPosts = async (_params: any = {}): Promise<{ metadata: any; posts: any[] }> => ({
+  metadata: null,
+  posts: []
+});

@@ -5,8 +5,11 @@ import PageStoreProvider from '@components/PageStoreProvider';
 
 const { slug, publishedOnly } = Astro.props;
 const pathResponse = await fetchPathResponse(slug);
+const path = pathResponse?.data?.path;
 
-if (publishedOnly && !pathResponse.data?.path?.published) {
+// No path (longform moves to WordPress in migration step 2 — until then there
+// is none) or an unpublished one under publishedOnly: 404.
+if (!path || (publishedOnly && !path.published)) {
   return new Response(null, { status: 404 });
 }
 
@@ -18,6 +21,6 @@ if (publishedOnly && !pathResponse.data?.path?.published) {
 />
 
 <PageStoreProvider
-  title={pathResponse?.data?.path.title}
+  title={path?.title}
   client:load
 />

@@ -1,4 +1,4 @@
-import { fetchI18n } from '@backend/tina';
+import { getAtlasConfig } from '@atlas/server';
 import { hasContentCollection } from '@root/src/content.config';
 import { getEntry } from 'astro:content';
 
@@ -8,13 +8,16 @@ import { getEntry } from 'astro:content';
  * @param locale
  */
 export const getI18n = async (locale) => {
-  let data;
-
+  // Content-collection cache path (STATIC_BUILD / USE_CONTENT_CACHE).
   if (hasContentCollection(locale)) {
-    data = await getEntry('i18n', locale);
-  } else {
-    data = await fetchI18n(locale);
+    return await getEntry('i18n', locale);
   }
 
-  return data;
+  // Console-owned i18n strings, resolved per request from the atlas bundle:
+  // `config.i18n.strings` is a map of locale -> flat `t_`-prefixed key/value
+  // pairs (the shape buildTranslations expects). Replaces the former TinaCMS
+  // i18n collection; any locale the console hasn't translated falls back to the
+  // frontend defaults (i18n.json / search.json / userDefinedFields.json).
+  const strings = getAtlasConfig().i18n?.strings;
+  return (strings && strings[locale]) || null;
 };
