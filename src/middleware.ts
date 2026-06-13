@@ -2,9 +2,14 @@ import { defineMiddleware } from 'astro:middleware';
 import { resolveAtlasBundle, runWithAtlas } from '@atlas/server';
 
 /**
- * Hosts that are never an atlas subdomain (the apex / infra labels).
+ * Hosts that are never an atlas subdomain (the apex / infra labels). Kept in
+ * sync with the reserved-slug list the console rejects at atlas creation, so a
+ * tenant can never claim an infra hostname (console/coredata/...).
  */
-const RESERVED_SUBDOMAINS = new Set(['www', 'api', 'app', 'localhost', '127', '0']);
+const RESERVED_SUBDOMAINS = new Set([
+  'www', 'api', 'app', 'console', 'coredata', 'staging', 'assets', 'static',
+  'cdn', 'localhost', '127', '0'
+]);
 
 /**
  * Derives an atlas slug from a Host header for the multi-tenant production
@@ -37,20 +42,20 @@ const subdomainSlug = (host: string): string | null => {
 
 /**
  * Resolves the atlas slug for a request, in priority order:
- *   1. `X-Atlas-Slug` header   — explicit override (proxy / testing).
- *   2. `?atlas=` query param    — local/dev convenience.
- *   3. Host subdomain           — production multi-tenant + `<slug>.localhost`.
- *   4. `OG_SITE_SLUG` env       — single-tenant / local default.
+ *   1. `X-Atlas-Slug` header   — explicit override (trusted proxy / testing).
+ *   2. Host subdomain           — production multi-tenant + `<slug>.localhost`.
+ *   3. `OG_SITE_SLUG` env       — single-tenant / local default.
+ *
+ * NB: there is intentionally NO `?atlas=` query param. It only set the top-level
+ * page's atlas while the client islands (/config.json, /api/i18n) — fetched
+ * without the param — fell back to Host/env, so the page showed one atlas's
+ * chrome with another's data. For local multi-atlas testing use
+ * `<slug>.localhost:<port>` (handled below) or the `X-Atlas-Slug` header.
  */
 const resolveSlug = (request: Request, url: URL): string | null => {
   const header = request.headers.get('x-atlas-slug');
   if (header) {
     return header.trim().toLowerCase();
-  }
-
-  const query = url.searchParams.get('atlas');
-  if (query) {
-    return query.trim().toLowerCase();
   }
 
   const host = request.headers.get('host') ?? url.host;
