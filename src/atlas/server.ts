@@ -56,6 +56,12 @@ export const getAtlasNavigation = (): any => getAtlas().navigation ?? null;
 // which resolves the slug independently. A short in-memory TTL collapses those
 // into a single console call per atlas.
 const CACHE_TTL_MS = Number(process.env.OG_ATLAS_CACHE_TTL_MS ?? 30_000);
+// On a transient console failure (5xx / network / timeout) we do NOT latch the
+// fallback for the full TTL — we serve the last-known-good bundle if we have one,
+// or retry after only this short negative window. So a brief console blip never
+// blanks an atlas for the whole TTL on the shared renderer.
+const ERROR_TTL_MS = Math.min(CACHE_TTL_MS, Number(process.env.OG_ATLAS_ERROR_TTL_MS ?? 5_000));
+const FETCH_TIMEOUT_MS = Number(process.env.OG_ATLAS_FETCH_TIMEOUT_MS ?? 5_000);
 
 interface CacheEntry {
   bundle: AtlasBundle;
@@ -69,9 +75,12 @@ const consoleBaseUrl = (): string =>
 
 /**
  * Resolves the atlas bundle for `slug` from the console's public by-slug
- * endpoint, with a short TTL cache. Returns the fallback bundle for a null
- * slug, an unknown/non-discoverable slug (404), or any console error — the
- * renderer never throws on resolution, it degrades.
+ * endpoint, with a short TTL cache. The renderer never throws on resolution; it
+ * degrades. Three outcomes are handled distinctly:
+ *   - 200 + config        → cache the real bundle for the full TTL.
+ *   - 404 (unknown slug)  → cache the fallback for the full TTL (don't hammer).
+ *   - error / non-OK 5xx  → serve the last-known-good bundle if cached, else the
+ *                           fallback for a short ERROR_TTL so recovery is quick.
  */
 export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBundle> => {
   if (!slug) {
@@ -83,11 +92,10 @@ export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBund
     return cached.bundle;
   }
 
-  let bundle = FALLBACK_BUNDLE;
-
   try {
     const response = await fetch(`${consoleBaseUrl()}/core_data/public/v1/atlases/${encodeURIComponent(slug)}`, {
-      headers: { Accept: 'application/json' }
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
     });
 
     if (response.ok) {
@@ -95,23 +103,40 @@ export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBund
       const atlas = body?.atlas;
 
       if (atlas?.config) {
-        bundle = {
+        const bundle: AtlasBundle = {
           slug: atlas.slug ?? slug,
           config: atlas.config,
           branding: atlas.branding ?? {},
           navigation: atlas.navigation ?? null
         };
+        cache.set(slug, { bundle, expires: Date.now() + CACHE_TTL_MS });
+        return bundle;
       }
-    } else if (response.status !== 404) {
-      // eslint-disable-next-line no-console
-      console.warn(`[atlas] console returned ${response.status} resolving slug "${slug}"`);
+
+      // 200 but no usable config — treat as unknown, like a 404.
+      cache.set(slug, { bundle: FALLBACK_BUNDLE, expires: Date.now() + CACHE_TTL_MS });
+      return FALLBACK_BUNDLE;
     }
+
+    if (response.status === 404) {
+      cache.set(slug, { bundle: FALLBACK_BUNDLE, expires: Date.now() + CACHE_TTL_MS });
+      return FALLBACK_BUNDLE;
+    }
+
+    // eslint-disable-next-line no-console
+    console.warn(`[atlas] console returned ${response.status} resolving slug "${slug}"`);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.warn(`[atlas] failed to resolve slug "${slug}":`, error instanceof Error ? error.message : error);
   }
 
-  cache.set(slug, { bundle, expires: Date.now() + CACHE_TTL_MS });
+  // Transient failure: prefer the last-known-good bundle (don't blank a live
+  // atlas because of a console blip); otherwise retry after a short window.
+  if (cached && cached.bundle !== FALLBACK_BUNDLE) {
+    cache.set(slug, { bundle: cached.bundle, expires: Date.now() + ERROR_TTL_MS });
+    return cached.bundle;
+  }
 
-  return bundle;
+  cache.set(slug, { bundle: FALLBACK_BUNDLE, expires: Date.now() + ERROR_TTL_MS });
+  return FALLBACK_BUNDLE;
 };
