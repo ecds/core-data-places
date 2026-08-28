@@ -2,7 +2,7 @@ import MapLayout from '@apps/search/map/MapLayout';
 import { MapSearchContextProvider } from '@apps/search/map/MapSearchContext';
 import MapSearchProvider from '@apps/search/map/MapSearchProvider';
 import { RuntimeConfigProvider } from '@apps/search/SearchConfigContext';
-import TypesenseSearch from '@apps/search/TypesenseSearch';
+import SearchProvider from '@apps/search/SearchProvider';
 import TranslationContext from '@contexts/TranslationContext';
 import { useTranslations } from '@i18n/useTranslations';
 import { Peripleo, Router } from '@peripleo/peripleo';
@@ -23,7 +23,7 @@ const MapSearch = ({ allowSave, lang, name, preload }: Props) => {
     >
       <Router>
         <Peripleo>
-          <TypesenseSearch>
+          <SearchProvider>
             <MapSearchProvider>
               <MapSearchContextProvider
                 allowSave={allowSave}
@@ -36,7 +36,7 @@ const MapSearch = ({ allowSave, lang, name, preload }: Props) => {
                 </TranslationContext.Provider>
               </MapSearchContextProvider>
             </MapSearchProvider>
-          </TypesenseSearch>
+          </SearchProvider>
         </Peripleo>
       </Router>
     </RuntimeConfigProvider>

@@ -80,6 +80,37 @@ export interface SearchConfig {
       [key: string]: string
     }
   };
+
+  /**
+   * Elasticsearch settings for this search.
+   *
+   * Present only for atlases migrated to Elasticsearch; when present it takes
+   * precedence over `typesense` (see `SearchProvider`). Note the deliberate
+   * asymmetry with the Typesense block above: there is no `host`, `protocol` or
+   * `api_key` here. This config is served to the browser at /config.json, so it
+   * must never carry a credential — the Elasticsearch connection is held
+   * server-side by the search handler (src/pages/api/search.json.ts) and the
+   * tenant filter is applied there too.
+   */
+  elasticsearch?: {
+    index_name: string,
+    search_attributes?: Array<string | { field: string, weight: number }>,
+    result_attributes?: Array<string>,
+    facet_attributes?: Array<string | {
+      attribute: string,
+      field?: string,
+      type?: 'string' | 'numeric' | 'date'
+    }>,
+    sort_attributes?: Array<{
+      name: string,
+      field: string,
+      order?: 'asc' | 'desc'
+    }>,
+    geo?: {
+      field: string,
+      type?: 'geo_point' | 'geo_shape'
+    }
+  };
 }
 
 export interface Configuration {
