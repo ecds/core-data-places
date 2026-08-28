@@ -18,15 +18,16 @@ export interface SearchSettings {
 }
 
 /**
- * The keyword sub-field convention for aggregatable string fields.
+ * Facet field resolution.
  *
- * CONTRACT SEAM: Elasticsearch can only aggregate (facet) on a `keyword` field,
- * so a text field `foo` is normally faceted through `foo.keyword`. Whether the
- * OG mapping declares dedicated keyword fields or relies on multi-fields is part
- * of the index mapping being locked — until then this suffix is applied to any
- * string facet that doesn't already name its own field.
+ * Elasticsearch can only aggregate (facet) on a `keyword` field. The canonical
+ * OG mapping's promoted facet fields (`types`, `administrative_area.name`, …)
+ * are ALREADY `keyword` typed, so a bare-string facet uses the attribute name
+ * as-is — appending `.keyword` there would point at a field that doesn't
+ * exist. A facet over an analyzed text field (e.g. a per-atlas UDF's
+ * `<uuid>.keyword` multi-field or a `*_facet` companion) must spell out its
+ * `field` explicitly in the long form.
  */
-const KEYWORD_SUFFIX = '.keyword';
 
 /**
  * Fallback attributes used when an atlas config doesn't specify its own.
@@ -52,8 +53,10 @@ const DEFAULT_RESULT_ATTRIBUTES = [
   'description',
   'short_description',
   'types',
-  'location',
-  'geojson'
+  'geo',
+  'geojson',
+  'administrative_area',
+  'thumbnail'
 ];
 
 /**
@@ -70,17 +73,15 @@ const normalizeFacet = (facet: any) => {
   if (typeof facet === 'string') {
     return {
       attribute: facet,
-      field: `${facet}${KEYWORD_SUFFIX}`,
+      field: facet,
       type: 'string' as const
     };
   }
 
-  const type = facet.type || 'string';
-
   return {
     attribute: facet.attribute,
-    field: facet.field || (type === 'string' ? `${facet.attribute}${KEYWORD_SUFFIX}` : facet.attribute),
-    type
+    field: facet.field || facet.attribute,
+    type: facet.type || 'string'
   };
 };
 

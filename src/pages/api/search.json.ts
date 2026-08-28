@@ -54,12 +54,15 @@ const findSearchConfig = (config: any, indexName: string) => (
 );
 
 /**
- * Reads the index name out of a Searchkit/InstantSearch request body.
+ * Reads the distinct index names out of a Searchkit/InstantSearch request body.
+ *
+ * Every request in the body is inspected, not just the first: a multi-search
+ * body could otherwise smuggle a second, unauthorized index past validation.
  *
  * @param body
  */
-const getIndexName = (body: any) => (
-  _.first(_.compact(_.pluck(body?.requests || [], 'indexName')))
+const getIndexNames = (body: any) => (
+  _.uniq(_.compact(_.pluck(body?.requests || [], 'indexName')))
 );
 
 export const POST: APIRoute = async ({ request }) => {
@@ -89,15 +92,26 @@ export const POST: APIRoute = async ({ request }) => {
    * is the multi-tenancy hook — the same running process serves every atlas.
    */
   const config = getAtlasConfig();
-  const indexName = getIndexName(body);
-  const searchConfig = findSearchConfig(config, indexName);
+  const indexNames = getIndexNames(body);
+
+  /**
+   * Exactly one index per request, and it must belong to the resolved atlas.
+   * A body naming zero, several, or an unconfigured index is refused rather
+   * than queried — this is the check that stops one atlas reading another's
+   * index by asking for it by name, and it also keeps the single
+   * search_settings below honest (mixed indexes would silently be queried
+   * with the wrong settings).
+   */
+  if (indexNames.length !== 1) {
+    return new Response(JSON.stringify({ error: 'Search requests must target exactly one index.' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const searchConfig = findSearchConfig(config, indexNames[0]);
 
   if (!searchConfig) {
-    /**
-     * The requested index does not belong to the resolved atlas. Refuse rather
-     * than query — this is the check that stops one atlas reading another's
-     * index by asking for it by name.
-     */
     return new Response(JSON.stringify({ error: 'Unknown search index for this atlas.' }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' }

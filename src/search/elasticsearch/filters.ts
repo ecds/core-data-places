@@ -56,6 +56,20 @@ export const buildBaseFilters = ({ projectIds, bbox, geoField }: BaseFilterOptio
   });
 
   /**
+   * Visibility. Hidden records must be unsearchable regardless of what the
+   * client asks for — enforced here, in the same trusted layer as the tenant
+   * filter, so the mapping's "every query filters on project_id + visibility"
+   * contract actually holds. Documents lacking the field are excluded (a term
+   * query never matches a missing field), which fails closed for any document
+   * indexed before the visibility field existed.
+   */
+  filters.push({
+    term: {
+      visibility: 'published'
+    }
+  });
+
+  /**
    * Map search. The renderer's map issues a viewport query as the user pans;
    * expressing it as a base filter keeps the geo clause server-side and out of
    * the InstantSearch refinement state.
