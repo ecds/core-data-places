@@ -320,55 +320,25 @@ describe('search', () => {
       });
     });
 
-    describe('typesense', () => {
+    describe('elasticsearch', () => {
       test('is not empty', () => {
-        expect(search.typesense).toBeObject();
-      });
-
-      test('host is not empty', () => {
-        expect(search.typesense?.host).toBeString();
-      });
-
-      test('port is numeric', () => {
-        expect(search.typesense?.port).toEqual(expect.any(Number));
-      });
-
-      test('protocol is not empty', () => {
-        expect(search.typesense?.protocol).toBeString();
-      });
-
-      test('api_key is not empty', () => {
-        expect(search.typesense?.api_key).toBeString();
+        expect(search.elasticsearch).toBeObject();
       });
 
       test('index_name is not empty', () => {
-        expect(search.typesense?.index_name).toBeString();
+        expect(search.elasticsearch?.index_name).toBeString();
       });
 
-      test('query_by is not empty', () => {
-        expect(search.typesense?.query_by).toBeString();
+      test('model_ids matches allowed values', () => {
+        expect(search.elasticsearch?.model_ids).toBeOneOf([undefined, expect.any(Array)]);
       });
 
-      test('default_sort matches allowed values', () => {
-        expect(search.typesense?.default_sort).toBeOneOf([undefined, expect.any(String)]);
+      test('facet_attributes matches allowed values', () => {
+        expect(search.elasticsearch?.facet_attributes).toBeOneOf([undefined, expect.any(Array)]);
       });
 
-      test('exclude_fields matches allowed values', () => {
-        expect(search.typesense?.exclude_fields).toBeOneOf([undefined, expect.any(String)]);
-      });
-
-      describe('facets', () => {
-        test('exclude matches allowed values', () => {
-          expect(search.typesense?.facets?.exclude).toBeArrayOf(String);
-        });
-
-        test('include matches allowed values', () => {
-          expect(search.typesense?.facets?.include).toBeArrayOf(String);
-        });
-      });
-
-      test('overrides matches allowed values', () => {
-        expect(search.typesense?.overrides).toBeOneOf([undefined, expect.any(Object)]);
+      test('sort_attributes matches allowed values', () => {
+        expect(search.elasticsearch?.sort_attributes).toBeOneOf([undefined, expect.any(Array)]);
       });
     });
   });

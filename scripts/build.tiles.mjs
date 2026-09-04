@@ -28,7 +28,7 @@ const argValue = (flag, fallback) => {
 };
 
 const config = JSON.parse(fs.readFileSync('public/config.json', 'utf8'));
-const indexName = config.search?.[0]?.typesense?.index_name || 'places';
+const indexName = config.search?.[0]?.name || 'places';
 const asDir = args.includes('--dir');
 const outFile = argValue('--out', asDir ? `public/tiles/${indexName}` : `public/tiles/${indexName}.pmtiles`);
 const minZoom = argValue('-Z', '6');

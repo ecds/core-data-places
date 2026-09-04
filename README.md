@@ -1,6 +1,6 @@
 # core-data-places
 
-A map-centric website backed by a Core Data project and Typesense index.
+A map-centric website backed by a Core Data project and Elasticsearch index.
 
 ## Getting Started
 
@@ -8,7 +8,7 @@ A map-centric website backed by a Core Data project and Typesense index.
 - Node 20.x
 - Netlify CLI
 - Core Data Project
-- Typesense Index
+- Elasticsearch index (Open Geographies v1)
 
 #### Environment variables
 
@@ -155,20 +155,20 @@ Copy the `/public/config.json` file into your content repository to `/content/se
 | search                                                                    | Array   | Search UI configuration                                                                                                                                                                                |
 | search.facets                                                             | Array   | Search facets configuration.                                                                                                                                                                           |
 | search.facets.icon                                                        | String  | Icon to display in the facet header                                                                                                                                                                    |
-| search.facets.name                                                        | String  | Name of the facet field as defined in Typesense                                                                                                                                                        |
+| search.facets.name                                                        | String  | Name of the facet field as indexed (e.g. `types`)                                                                                                                                                         |
 | search.facets.type                                                        | String  | Search facet type: "list", "range", or "select"                                                                                                                                                        |
 | search.geosearch                                                          | Boolean | If `true`, the "filter by map bounds" facet will be available in the map interface.                                                                                                                    |
 | search.map                                                                | Object  | Map configuration                                                                                                                                                                                      |
 | search.map.cluster_radius                                                 | Number  | If provided, map points will be clustered for the given radius (in miles). This option is only valid if the `map.geometry` property contains Lat/Lng coordinates.                                      |
-| search.map.geometry                                                       | String  | Path to the attribute in the Typesense document that contains the GeoJSON data to be displayed on the map                                                                                              |
-| search.map.properties                                                     | String  | Path to the attribute in the Typesense document that contains the properties object for the GeoJSON                                                                                                    |
+| search.map.geometry                                                       | String  | Path to the attribute in the search document that contains the GeoJSON data to be displayed on the map                                                                                              |
+| search.map.properties                                                     | String  | Path to the attribute in the search document that contains the properties object for the GeoJSON                                                                                                    |
 | search.map.max_zoom                                                       | Number  | The maximum zoom level to allow when the map view transitions to a set of bounds (a single place, or mulitple places).                                                                                 |
 | search.map.zoom_to_place                                                  | Boolean | If `true` or not specified, clicking on an individual place marker or search result will zoom the map to its location (using the max zoom).                                                            |
 | search.name                                                               | String  | The name of the search index configuration.                                                                                                                                                            |
 | search.result_card                                                        | Object  | Search result card configuration                                                                                                                                                                       |
-| search.result_card.title                                                  | String  | Path to the value in the Typesense document that should be used as the card title. This value can contain nested objects (e.g. `<relationship-id>.0.name`).                                            |
+| search.result_card.title                                                  | String  | Path to the value in the search document that should be used as the card title. This value can contain nested objects (e.g. `<relationship-id>.0.name`).                                            |
 | search.result_card.attributes                                             | Array   | Attributes to display in the search list and table                                                                                                                                                     |
-| search.result_card.attributes.name                                        | String  | Path to the value in the Typesense document that should be used to look up the column value. This value can contain nested objects (e.g. `<relationship-id>.0.name`).                                  |
+| search.result_card.attributes.name                                        | String  | Path to the value in the search document that should be used to look up the column value. This value can contain nested objects (e.g. `<relationship-id>.0.name`).                                  |
 | search.result_card.attributes.icon                                        | String  | Name of the icon that should displayed next to the value in the search list. If not provided, a bullet point will be used.                                                                             |
 | search.result_card.attributes.parser                                      | String  | Specifies the parser to use to format the value.                                                                                                                                                       |
 | search.result_card.relationships                                          | Array   | Relationships to display on the cards in the list and grid searches                                                                                                                                    |
@@ -180,22 +180,14 @@ Copy the `/public/config.json` file into your content repository to `/content/se
 | search.route                                                              | String  | The navigation route to use when clicking on a search result card (e.g. "/places", "/organizations", etc)                                                                                              |
 | search.table                                                              | Boolean | If `false`, will suppress the table view for search results                                                                                                                                            |
 | search.timeline                                                           | Object  | Timeline configuration                                                                                                                                                                                 |
-| search.timeline.date_range_facet                                          | String  | Path to the date range facet field in the Typesense document that will be used as the basis for the timeline. Required for the timeline to appear.                                                     |
-| search.timeline.event_path                                                | String  | Path to the event relation in the Typesense document. Required only if Event is not the primary model of this search index configuration.                                                              |
+| search.timeline.date_range_facet                                          | String  | Path to the date range facet field in the search document that will be used as the basis for the timeline. Required for the timeline to appear.                                                     |
+| search.timeline.event_path                                                | String  | Path to the event relation in the search document. Required only if Event is not the primary model of this search index configuration.                                                              |
 | search.type                                                               | String  | If `map`, the map search component will be used. If `image`, `list`, or `grid`, the non-map search component will be used with the corresponding layout. Defaults to `map` when not present.           |
-| search.typesense                                                          | Object  | Typesense index connection information                                                                                                                                                                 |
-| search.typesense.host                                                     | String  | Typesense host URL                                                                                                                                                                                     |
-| search.typesense.port                                                     | Number  | Typesense host port                                                                                                                                                                                    |
-| search.typesense.protocol                                                 | String  | Typesense host protocol. Typically "https" or "http"                                                                                                                                                   |
-| search.typesense.api_key                                                  | String  | Typesense search API key. **NOTE:** This should be a read-only key.                                                                                                                                    |
-| search.typesense.index_name                                               | String  | Name of the Typesense collection                                                                                                                                                                       |
-| search.typesense.query_by                                                 | String  | Typesense attributes to query when a search is executed                                                                                                                                                |
-| search.typesense.default_sort                                             | String  | Typesense attribute to sort by when no search is entered or as a tiebreaker. Search relevance score will always take priority over this attribute.                                                     |
-| search.typesense.exclude_fields                                           | String  | Fields to exclude from the Typesense search response                                                                                                                                                   |
-| search.typesense.facets                                                   | Object  | Facet configuration                                                                                                                                                                                    |
-| search.typesense.facets.exclude                                           | Array   | Array of facet names to exclude                                                                                                                                                                        |
-| search.typesense.facets.include                                           | Array   | Array of facet names to include                                                                                                                                                                        |
-| search.typesense.overrides                                                | Object  | Overrides for the [typesense-instantsearch-adapter](https://github.com/typesense/typesense-instantsearch-adapter).                                                                                     |
+| search.elasticsearch                                                      | Object  | Elasticsearch search settings (no credentials: the connection is server-side, `OG_ELASTICSEARCH_URL`)                                                                                                 |
+| search.elasticsearch.index_name                                           | String  | Name of the shared Elasticsearch index                                                                                                                                                                 |
+| search.elasticsearch.model_ids                                            | Array   | Project model ids this search is over (applied as a server-side filter with `core_data.project_ids`)                                                                                                    |
+| search.elasticsearch.facet_attributes                                     | Array   | Facet attributes, in display order: a field name, or `{ attribute, field, type }` for numeric/date ranges                                                                                               |
+| search.elasticsearch.sort_attributes                                      | Array   | Additional sorts, as `{ name, field, order }`; A–Z / Z–A on `name.keyword` are always available                                                                                                          |
 
 See [Configuration Schema](docs/configuration-schema.md) for more detailed information.
 
@@ -247,16 +239,6 @@ Core Data Places can be built in "static" mode, which will remove the dependency
 ## Upgrading
 
 For more information on upgrading your existing Core Data Places site to a newer version, see the [update notes](docs/upgrade-notes.md) section.
-
-## Typesense Fields
-
-To find all of the available fields in the Typesense schema, a `GET` request can be made to the Typesense API:
-
-```
-GET ${TYPESENSE_HOST}/collections/:collection
-```
-
-An `x-typesense-api-key` header will need to be added to the request.
 
 ## Core Data Fields and Relationships
 
