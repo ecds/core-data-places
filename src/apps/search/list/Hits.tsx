@@ -6,7 +6,15 @@ import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { useRuntimeConfig } from '@peripleo/peripleo';
 import { Highlight } from 'react-instantsearch';
 import { useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { getAttributes, getFacetLabel, getHitValue, getRelationshipLabel, isInverse } from '@utils/search';
+import {
+  getAttributes,
+  getFacetLabel,
+  getHitValue,
+  getRelatedItems,
+  getRelationshipLabel,
+  isInverse,
+  isRelatedRecord
+} from '@utils/search';
 import { MediaGallery } from '@performant-software/core-data';
 import clsx from 'clsx';
 import TranslationContext from '@contexts/TranslationContext';
@@ -21,6 +29,44 @@ const hitComponents = {
   grid: GridHit,
   image: ImageHit,
   list: ListHit
+};
+
+interface HighlightProps {
+  attribute: string;
+  className?: string;
+  hit: any;
+}
+
+/**
+ * Highlights a hit attribute where the engine provides a highlight for it, and
+ * otherwise renders the plain value. Highlights are only built for top-level
+ * fields; a nested path (`contained_in_place.name`) or a value with no
+ * `_highlightResult` entry (a `{ label, value }` user-defined field) would
+ * otherwise render blank or as "[object Object]".
+ */
+const HitHighlight = ({ attribute, className, hit }: HighlightProps) => {
+  const highlight = hit?._highlightResult?.[attribute];
+  const highlightable = !attribute.includes('.') && !!highlight && (Array.isArray(highlight) || typeof highlight.value === 'string');
+
+  if (highlightable && !(highlight.value === '[object Object]')) {
+    return (
+      <Highlight
+        attribute={attribute}
+        className={className}
+        hit={hit}
+      />
+    );
+  }
+
+  const value = getHitValue(hit, { name: attribute });
+
+  return (
+    <span
+      className={className}
+    >
+      { Array.isArray(value) ? value.join(', ') : value }
+    </span>
+  );
 };
 
 const Hits = (props: Props) => {
@@ -48,28 +94,22 @@ const Hits = (props: Props) => {
 
       // assemble relationships for hit components
       if (searchConfig.result_card?.relationships) {
-        for (const key of Object.keys(hit)) {
-          const val = hit[key];
-
-          if (Array.isArray(val) && val.length > 0) {
-            for (const item of val) {
-              const isRelationship = item.inverse !== undefined;
-
-              if (isRelationship && searchConfig.result_card.relationships.includes(key)) {
-                if (relationships[key]) {
-                  relationships[key].items.push({
+        for (const key of searchConfig.result_card.relationships) {
+          for (const item of getRelatedItems(hit, key)) {
+            if (isRelatedRecord(item)) {
+              if (relationships[key]) {
+                relationships[key].items.push({
+                  name: item.name,
+                  uuid: item.uuid
+                });
+              } else {
+                relationships[key] = {
+                  label: getRelationshipLabel(key, t, !!item.inverse),
+                  items: [{
                     name: item.name,
                     uuid: item.uuid
-                  });
-                } else {
-                  relationships[key] = {
-                    label: getRelationshipLabel(key, t, item.inverse),
-                    items: [{
-                      name: item.name,
-                      uuid: item.uuid
-                    }]
-                  };
-                }
+                  }]
+                };
               }
             }
           }
@@ -130,7 +170,7 @@ const Hits = (props: Props) => {
   const renderItem = useCallback((item: any) => {
     const hitComp = (
       <HitComponent
-        highlightComponent={Highlight}
+        highlightComponent={HitHighlight}
         key={item.hit.id}
         labels={{
           tags: t('tags')
