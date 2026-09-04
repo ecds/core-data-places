@@ -63,37 +63,17 @@ export interface SearchConfig {
 
   type?: 'grid' | 'image' | 'list' | 'map';
 
-  typesense: {
-    host: string,
-    port: number,
-    protocol: string,
-    api_key: string,
-    index_name: string,
-    query_by: string,
-    default_sort?: string,
-    exclude_fields?: string,
-    facets?: {
-      exclude?: Array<string>,
-      include?: Array<string>
-    }
-    overrides?: {
-      [key: string]: string
-    }
-  };
-
   /**
    * Elasticsearch settings for this search.
    *
-   * Present only for atlases migrated to Elasticsearch; when present it takes
-   * precedence over `typesense` (see `SearchProvider`). Note the deliberate
-   * asymmetry with the Typesense block above: there is no `host`, `protocol` or
-   * `api_key` here. This config is served to the browser at /config.json, so it
-   * must never carry a credential — the Elasticsearch connection is held
-   * server-side by the search handler (src/pages/api/search.json.ts) and the
-   * tenant filter is applied there too.
+   * Note there is no `host`, `protocol` or `api_key` here. This config is served
+   * to the browser at /config.json, so it must never carry a credential — the
+   * Elasticsearch connection is held server-side by the search handler
+   * (src/pages/api/search.json.ts) and the tenant filter is applied there too.
    */
-  elasticsearch?: {
+  elasticsearch: {
     index_name: string,
+    model_ids?: Array<string>,
     search_attributes?: Array<string | { field: string, weight: number }>,
     result_attributes?: Array<string>,
     facet_attributes?: Array<string | {

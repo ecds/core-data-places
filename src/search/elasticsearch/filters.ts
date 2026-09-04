@@ -16,9 +16,18 @@
  */
 export const TENANT_FIELD = 'project_id';
 
+/**
+ * The field carrying the owning project model on every OG document. The shared
+ * index holds every model of every atlas (places, taxonomy terms, people, …),
+ * so a search declares which models it is over.
+ */
+export const MODEL_FIELD = 'model_id';
+
 interface BaseFilterOptions {
   /** The project id(s) the current atlas is allowed to see. */
   projectIds: Array<string | number>;
+  /** The project model id(s) this search is over; omitted means every model in the project. */
+  modelIds?: Array<string | number>;
   /** Optional map-search viewport, as [west, south, east, north]. */
   bbox?: [number, number, number, number];
   /** The document's geo_point field, when the atlas supports map search. */
@@ -36,7 +45,7 @@ interface BaseFilterOptions {
  *
  * @param options
  */
-export const buildBaseFilters = ({ projectIds, bbox, geoField }: BaseFilterOptions) => {
+export const buildBaseFilters = ({ projectIds, modelIds, bbox, geoField }: BaseFilterOptions) => {
   const filters: Array<any> = [];
 
   if (!projectIds?.length) {
@@ -51,9 +60,17 @@ export const buildBaseFilters = ({ projectIds, bbox, geoField }: BaseFilterOptio
 
   filters.push({
     terms: {
-      [TENANT_FIELD]: projectIds
+      [TENANT_FIELD]: projectIds.map(String)
     }
   });
+
+  if (modelIds?.length) {
+    filters.push({
+      terms: {
+        [MODEL_FIELD]: modelIds.map(String)
+      }
+    });
+  }
 
   /**
    * Visibility. Hidden records must be unsearchable regardless of what the

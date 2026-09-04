@@ -1,4 +1,5 @@
 import type { SearchConfig } from '@types';
+import _ from 'underscore';
 
 /**
  * The `search_settings` object consumed by `@searchkit/api` on the server.
@@ -8,6 +9,7 @@ import type { SearchConfig } from '@types';
 export interface SearchSettings {
   search_attributes: Array<string | { field: string, weight: number }>;
   result_attributes: Array<string>;
+  highlight_attributes?: Array<string>;
   facet_attributes: Array<{ attribute: string, field: string, type: 'string' | 'numeric' | 'date' }>;
   sorting?: {
     [key: string]: {
@@ -60,6 +62,73 @@ const DEFAULT_RESULT_ATTRIBUTES = [
 ];
 
 /**
+ * Marks the sort suffix the UI appends to an index name (`<index>_sort_<name>`).
+ * Searchkit matches sorts by `indexName.endsWith(key)`; the marker keeps the
+ * suffix distinguishable from the index name itself.
+ */
+export const SORT_MARKER = '_sort_';
+
+/**
+ * The sort suffix for a named sort: `name_asc` → `_sort_name_asc`.
+ *
+ * @param name
+ */
+export const toSortKey = (name: string) => `${SORT_MARKER}${name}`;
+
+/**
+ * The index name a request targets, without any sort suffix.
+ *
+ * @param indexName
+ */
+export const toIndexName = (indexName: string) => indexName.split(SORT_MARKER)[0];
+
+/**
+ * Sorts every atlas gets. `default` is Searchkit's name for the sort applied
+ * when the request names none: relevance for a query, and A–Z otherwise would
+ * be ideal, but Searchkit applies `default` to every unsorted request, so it is
+ * left unset and relevance (`_score`) is the unsorted order.
+ */
+const DEFAULT_SORTING = {
+  [toSortKey('name_asc')]: { field: 'name.keyword', order: 'asc' as const },
+  [toSortKey('name_desc')]: { field: 'name.keyword', order: 'desc' as const }
+};
+
+/**
+ * The top-level document field for a dotted or facet path: `contained_in_place.name`
+ * → `contained_in_place`, `denomination_facet` → `denomination_facet`.
+ *
+ * @param path
+ */
+const toRootField = (path: string) => path.split('.')[0];
+
+/**
+ * The document paths a search's result card renders, without positional
+ * indices (`people.0.name` → `people.name`).
+ *
+ * @param searchConfig
+ */
+const getCardAttributes = (searchConfig: SearchConfig) => {
+  const card = searchConfig?.result_card;
+
+  return _.compact([
+    card?.title,
+    ...(card?.attributes || []).map((attribute) => attribute.name),
+    ...(card?.tags || []).map((tag) => tag.name),
+    ...(card?.relationships || [])
+  ]).map((path) => path.replace(/\.\d+/g, ''));
+};
+
+/**
+ * The field names in a `search_attributes` list (bare or weighted).
+ *
+ * @param attributes
+ */
+const settingsSearchFields = (attributes?: Array<string | { field: string, weight: number }>) => (
+  (attributes?.length ? attributes : DEFAULT_SEARCH_ATTRIBUTES)
+    .map((attribute) => (typeof attribute === 'string' ? attribute : attribute.field))
+);
+
+/**
  * Normalizes a configured facet into Searchkit's `facet_attributes` shape.
  *
  * Accepts either a bare string (`'types'`) or a fully-specified object
@@ -99,29 +168,49 @@ const normalizeFacet = (facet: any) => {
  */
 export const buildSearchSettings = (searchConfig: SearchConfig): SearchSettings => {
   const es = searchConfig?.elasticsearch;
+  const cardAttributes = getCardAttributes(searchConfig);
 
   const settings: SearchSettings = {
     search_attributes: es?.search_attributes?.length
       ? es.search_attributes
       : DEFAULT_SEARCH_ATTRIBUTES,
-    result_attributes: es?.result_attributes?.length
-      ? es.result_attributes
-      : DEFAULT_RESULT_ATTRIBUTES,
+    /**
+     * The result card names the fields it renders (title, attributes, tags,
+     * relationships); those are always returned so a card never renders blank
+     * for want of a `result_attributes` entry. The facet fields ride along so
+     * a hit can tell the UI which side of a relationship it is on.
+     */
+    result_attributes: _.uniq([
+      ...(es?.result_attributes?.length ? es.result_attributes : DEFAULT_RESULT_ATTRIBUTES),
+      ...cardAttributes.map(toRootField),
+      ...(es?.facet_attributes || []).map((facet) => toRootField(normalizeFacet(facet).attribute))
+    ]),
+    /**
+     * Searchkit only emits `_highlightResult` (which react-instantsearch's
+     * `<Highlight>` renders from, even with no match) for listed attributes.
+     */
+    highlight_attributes: _.uniq([
+      ...settingsSearchFields(es?.search_attributes),
+      ...cardAttributes
+    ]),
     facet_attributes: (es?.facet_attributes || []).map(normalizeFacet)
   };
 
   /**
-   * Sorting. Typesense expresses sorts as pseudo-indices
-   * (`index/sort/field:asc`); Searchkit declares them up front and refers to
-   * them by name. `SortBy.tsx` still speaks the Typesense dialect, so wiring the
-   * sort UI to these names is a follow-up once the sortable fields are fixed.
+   * Sorting. Typesense expressed sorts as pseudo-indices (`index/sort/field:asc`);
+   * Searchkit declares them up front, keyed by a suffix the UI appends to the
+   * index name (`<index><key>`, see `SortBy.tsx` and `toSortKey`). The
+   * canonical mapping guarantees `name.keyword` on every document, so the
+   * A–Z / Z–A sorts are always available; an atlas may add its own via
+   * `sort_attributes`, whose entries win on a key clash.
    */
-  if (es?.sort_attributes?.length) {
-    settings.sorting = es.sort_attributes.reduce((acc, sort) => ({
+  settings.sorting = {
+    ...DEFAULT_SORTING,
+    ...(es?.sort_attributes || []).reduce((acc, sort) => ({
       ...acc,
-      [sort.name]: { field: sort.field, order: sort.order || 'asc' }
-    }), {});
-  }
+      [toSortKey(sort.name)]: { field: sort.field, order: sort.order || 'asc' }
+    }), {})
+  };
 
   return settings;
 };

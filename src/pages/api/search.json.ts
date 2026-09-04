@@ -3,7 +3,8 @@ import type { APIRoute } from 'astro';
 import _ from 'underscore';
 import { getAtlasConfig } from '@atlas/server';
 import { buildBaseFilters } from '@search/elasticsearch/filters';
-import { buildSearchSettings } from '@search/elasticsearch/settings';
+import { buildSearchSettings, toIndexName } from '@search/elasticsearch/settings';
+import { SEARCH_PARAM } from '@search/elasticsearch/client';
 
 /**
  * The Elasticsearch search handler.
@@ -41,31 +42,76 @@ const getConnection = () => ({
 });
 
 /**
- * Finds the atlas search config whose Elasticsearch index matches the index the
- * client asked for, so one endpoint can serve every search on the atlas (map,
- * list, and any per-content-type searches) without trusting the client to tell
- * us which project it belongs to.
+ * Finds the atlas search config a request is for, so one endpoint can serve
+ * every search on the atlas (map, list, and any per-content-type searches)
+ * without trusting the client to tell us which project it belongs to.
+ *
+ * The client names its search (`?search=<name>`); the match must also carry the
+ * index the request targets. Every search on an atlas reads the same shared
+ * index, so without the name the first search on that index would answer for
+ * all of them with the wrong facets and model filter. A request with no name
+ * falls back to that first match.
  *
  * @param config
  * @param indexName
+ * @param searchName
  */
-const findSearchConfig = (config: any, indexName: string) => (
-  _.find(config?.search || [], (search: any) => search?.elasticsearch?.index_name === indexName)
+const findSearchConfig = (config: any, indexName: string, searchName?: string | null) => (
+  _.find(config?.search || [], (search: any) => (
+    search?.elasticsearch?.index_name === indexName && (!searchName || search.name === searchName)
+  ))
 );
 
 /**
- * Reads the distinct index names out of a Searchkit/InstantSearch request body.
- *
- * Every request in the body is inspected, not just the first: a multi-search
- * body could otherwise smuggle a second, unauthorized index past validation.
+ * Normalizes the request body to the array of InstantSearch requests Searchkit
+ * consumes. `@searchkit/instantsearch-client` posts the bare array; the
+ * InstantSearch wire format wraps it as `{ requests: [...] }`.
  *
  * @param body
  */
-const getIndexNames = (body: any) => (
-  _.uniq(_.compact(_.pluck(body?.requests || [], 'indexName')))
+const getRequests = (body: any): Array<any> => {
+  if (Array.isArray(body)) {
+    return body;
+  }
+
+  return Array.isArray(body?.requests) ? body.requests : [];
+};
+
+/**
+ * Reads the distinct index names out of the InstantSearch requests, with any
+ * sort suffix removed (the sort UI selects a sort by targeting `<index>_sort_<name>`).
+ *
+ * Every request is inspected, not just the first: a multi-search body could
+ * otherwise smuggle a second, unauthorized index past validation.
+ *
+ * @param requests
+ */
+const getIndexNames = (requests: Array<any>) => (
+  _.uniq(_.compact(_.pluck(requests, 'indexName')).map(toIndexName))
 );
 
-export const POST: APIRoute = async ({ request }) => {
+/**
+ * Aligns Elasticsearch hits with the record shape the search UI was written
+ * against. Every hit needs `id` (the record UUID, which the panels and detail
+ * links address records by) and `record_id` (the map feature id). A v1 document
+ * carries `uuid` and no `id`; Searchkit exposes the document `_id` as
+ * `objectID`, which is the connector's numeric record id.
+ *
+ * @param results
+ */
+const normalizeResults = (results: any) => ({
+  ...results,
+  results: _.map(results?.results || [], (result: any) => ({
+    ...result,
+    hits: _.map(result?.hits || [], (hit: any) => ({
+      ...hit,
+      id: hit.id ?? hit.uuid,
+      record_id: hit.record_id ?? hit.objectID
+    }))
+  }))
+});
+
+export const POST: APIRoute = async ({ request, url }) => {
   const connection = getConnection();
 
   if (!connection.host) {
@@ -92,7 +138,8 @@ export const POST: APIRoute = async ({ request }) => {
    * is the multi-tenancy hook — the same running process serves every atlas.
    */
   const config = getAtlasConfig();
-  const indexNames = getIndexNames(body);
+  const requests = getRequests(body);
+  const indexNames = getIndexNames(requests);
 
   /**
    * Exactly one index per request, and it must belong to the resolved atlas.
@@ -109,7 +156,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  const searchConfig = findSearchConfig(config, indexNames[0]);
+  const searchConfig = findSearchConfig(config, indexNames[0], url.searchParams.get(SEARCH_PARAM));
 
   if (!searchConfig) {
     return new Response(JSON.stringify({ error: 'Unknown search index for this atlas.' }), {
@@ -125,20 +172,20 @@ export const POST: APIRoute = async ({ request }) => {
     debug: import.meta.env.DEV
   });
 
-  const results = await apiClient.handleRequest(body, {
+  const results = await apiClient.handleRequest(requests, {
     getBaseFilters: () => buildBaseFilters({
       projectIds: config?.core_data?.project_ids || [],
+      modelIds: searchConfig.elasticsearch?.model_ids,
       geoField: searchConfig.elasticsearch?.geo?.field
       /**
-       * TODO (map search): thread the viewport bbox through to here. The map
-       * currently refines client-side against Typesense's geo filter; once the
-       * geo mapping is fixed, `MapSearchContext` should send the bbox with the
-       * request so it can be applied as a base filter above.
+       * TODO (map search): thread the viewport bbox through to here so
+       * `MapSearchContext` can send it with the request and it is applied as
+       * a base filter (`geo.point`) rather than refined client-side.
        */
     })
   });
 
-  return new Response(JSON.stringify(results), {
+  return new Response(JSON.stringify(normalizeResults(results)), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store'

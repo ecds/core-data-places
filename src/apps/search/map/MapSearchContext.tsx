@@ -13,6 +13,7 @@ import {
   type ReactNode
 } from 'react';
 import _ from 'underscore';
+import { withGeometry } from '@utils/search';
 
 interface BoundingBoxOptions {
   padding: {
@@ -147,7 +148,10 @@ export const MapSearchContextProvider = ({ allowSave, children, preload }: Props
 
     const { geometry = 'geometry', properties } = config.map || {};
 
-    setFeatures(TypesenseUtils.getFeatures(features, hits, geometry, properties, options));
+    // v1 documents carry `geo.point`/`geo.shape` rather than an embedded GeoJSON geometry
+    const geoHits = _.map(hits, (hit) => withGeometry(hit, geometry));
+
+    setFeatures(TypesenseUtils.getFeatures(features, geoHits, geometry, properties, options));
   }, [geometries, hits]);
 
   /**

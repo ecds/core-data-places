@@ -1,6 +1,6 @@
 import { Peripleo, RuntimeConfig } from '@peripleo/peripleo';
 import { LocationMarkers } from '@performant-software/geospatial';
-import { Peripleo as PeripleoUtils } from '@performant-software/core-data';
+import { normalizeRuntimeConfig } from '@utils/runtimeConfig';
 import Map from '@components/Map';
 import TranslationContext from '@contexts/TranslationContext';
 import { useTranslations } from '@i18n/useTranslations';
@@ -58,7 +58,7 @@ const PlaceMap = (props: Props) => {
     >
       <RuntimeConfig
         path='/config.json'
-        preprocess={PeripleoUtils.normalize}
+        preprocess={normalizeRuntimeConfig}
       >
         <Peripleo>
           <Map classNames={props.classNames}>
