@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import { InstantSearch } from 'react-instantsearch';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { createSearchClient } from '@search/elasticsearch/client';
+import { createRouting } from '@search/elasticsearch/routing';
 
 /**
  * The search provider: an `<InstantSearch>` wrapper over the server-side
@@ -36,19 +37,25 @@ const ElasticSearch = (props: { children: ReactNode }) => {
     return { attributes, rangeAttributes };
   }, [elasticsearch]);
 
+  /**
+   * Query, refinements and sort are reflected in the URL's query string (see
+   * `routing.ts`); range facets need naming so their `min:max` values are read
+   * back as ranges rather than list refinements.
+   */
+  const routing = useMemo(() => createRouting({
+    indexName: elasticsearch.index_name,
+    rangeAttributes: facetState.rangeAttributes
+  }), [elasticsearch.index_name, facetState.rangeAttributes]);
+
   return (
     <InstantSearch
       indexName={elasticsearch.index_name}
+      routing={routing}
       searchClient={searchClient}
       future={{
         preserveSharedStateOnUnmount: true
       }}
     >
-      { /**
-         * TODO (routing): refinements are not yet reflected in the URL. This
-         * needs an InstantSearch `routing` object written against the
-         * facet attribute names.
-         */ }
       <FacetStateContext.Provider
         value={facetState}
       >

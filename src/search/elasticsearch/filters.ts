@@ -28,10 +28,6 @@ interface BaseFilterOptions {
   projectIds: Array<string | number>;
   /** The project model id(s) this search is over; omitted means every model in the project. */
   modelIds?: Array<string | number>;
-  /** Optional map-search viewport, as [west, south, east, north]. */
-  bbox?: [number, number, number, number];
-  /** The document's geo_point field, when the atlas supports map search. */
-  geoField?: string;
 }
 
 /**
@@ -45,7 +41,7 @@ interface BaseFilterOptions {
  *
  * @param options
  */
-export const buildBaseFilters = ({ projectIds, modelIds, bbox, geoField }: BaseFilterOptions) => {
+export const buildBaseFilters = ({ projectIds, modelIds }: BaseFilterOptions) => {
   const filters: Array<any> = [];
 
   if (!projectIds?.length) {
@@ -85,28 +81,6 @@ export const buildBaseFilters = ({ projectIds, modelIds, bbox, geoField }: BaseF
       visibility: 'published'
     }
   });
-
-  /**
-   * Map search. The renderer's map issues a viewport query as the user pans;
-   * expressing it as a base filter keeps the geo clause server-side and out of
-   * the InstantSearch refinement state.
-   *
-   * CONTRACT SEAM: assumes the geo field is a `geo_point`. If the locked mapping
-   * makes it a `geo_shape` (needed for polygon extents rather than centroids),
-   * this becomes a `geo_shape` / `envelope` query instead.
-   */
-  if (bbox && geoField) {
-    const [west, south, east, north] = bbox;
-
-    filters.push({
-      geo_bounding_box: {
-        [geoField]: {
-          top_left: { lat: north, lon: west },
-          bottom_right: { lat: south, lon: east }
-        }
-      }
-    });
-  }
 
   return filters;
 };

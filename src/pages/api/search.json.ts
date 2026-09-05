@@ -175,13 +175,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   const results = await apiClient.handleRequest(requests, {
     getBaseFilters: () => buildBaseFilters({
       projectIds: config?.core_data?.project_ids || [],
-      modelIds: searchConfig.elasticsearch?.model_ids,
-      geoField: searchConfig.elasticsearch?.geo?.field
-      /**
-       * TODO (map search): thread the viewport bbox through to here so
-       * `MapSearchContext` can send it with the request and it is applied as
-       * a base filter (`geo.point`) rather than refined client-side.
-       */
+      modelIds: searchConfig.elasticsearch?.model_ids
     })
   });
 

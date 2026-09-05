@@ -10,6 +10,7 @@ export interface SearchSettings {
   search_attributes: Array<string | { field: string, weight: number }>;
   result_attributes: Array<string>;
   highlight_attributes?: Array<string>;
+  geo_attribute?: string;
   facet_attributes: Array<{ attribute: string, field: string, type: 'string' | 'numeric' | 'date' }>;
   sorting?: {
     [key: string]: {
@@ -46,6 +47,8 @@ const DEFAULT_SEARCH_ATTRIBUTES = [
   'description',
   'short_description'
 ];
+
+const DEFAULT_GEO_ATTRIBUTE = 'geo.point';
 
 const DEFAULT_RESULT_ATTRIBUTES = [
   'uuid',
@@ -193,7 +196,14 @@ export const buildSearchSettings = (searchConfig: SearchConfig): SearchSettings 
       ...settingsSearchFields(es?.search_attributes),
       ...cardAttributes
     ]),
-    facet_attributes: (es?.facet_attributes || []).map(normalizeFacet)
+    facet_attributes: (es?.facet_attributes || []).map(normalizeFacet),
+    /**
+     * Map search. The map refines with InstantSearch's `insideBoundingBox`
+     * (see `useGeoSearchToggle`), which Searchkit turns into a
+     * `geo_bounding_box` filter on this field. The canonical mapping puts
+     * every record's centroid at `geo.point`.
+     */
+    geo_attribute: es?.geo?.field || DEFAULT_GEO_ATTRIBUTE
   };
 
   /**
