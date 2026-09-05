@@ -1,5 +1,6 @@
 import { getAtlasConfig } from '@atlas/server';
 import { hasContentCollection } from '@root/src/content.config';
+import { getDescriptorLabels } from '@services/descriptors';
 import { getEntry } from 'astro:content';
 
 /**
@@ -18,6 +19,13 @@ export const getI18n = async (locale) => {
   // pairs (the shape buildTranslations expects). Replaces the former TinaCMS
   // i18n collection; any locale the console hasn't translated falls back to the
   // frontend defaults (i18n.json / search.json / userDefinedFields.json).
+  //
+  // Beneath the console's strings sit the atlas's own descriptor labels
+  // (relationship / field names from Core Data, keyed by UUID), so a record's
+  // relationships and UUID-keyed facets are never labeled blank on an atlas
+  // nobody has translated yet.
   const strings = getAtlasConfig().i18n?.strings;
-  return (strings && strings[locale]) || null;
+  const labels = await getDescriptorLabels();
+
+  return { ...labels, ...((strings && strings[locale]) || {}) };
 };
