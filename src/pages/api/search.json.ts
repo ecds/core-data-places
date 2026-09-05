@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro';
 import _ from 'underscore';
 import { getAtlasConfig } from '@atlas/server';
 import { buildBaseFilters } from '@search/elasticsearch/filters';
-import { buildSearchSettings, toIndexName } from '@search/elasticsearch/settings';
+import { buildSearchSettings, toIndexName, type SearchSettings } from '@search/elasticsearch/settings';
 import { SEARCH_PARAM } from '@search/elasticsearch/client';
 
 /**
@@ -111,6 +111,53 @@ const normalizeResults = (results: any) => ({
   }))
 });
 
+/**
+ * The attributes a request may facet or filter on: exactly the search's
+ * declared facets. Anything else is refused before it reaches Searchkit —
+ * partly so a hand-crafted `facetFilters: ['project_id:2']` is a clean 400
+ * rather than a Searchkit exception, and partly as defence in depth: the
+ * tenant, model and visibility fields are applied as base filters and are
+ * never client-addressable, whatever the engine underneath would accept.
+ *
+ * Returns the offending attribute, or null when the request is clean.
+ *
+ * @param requests
+ * @param settings
+ */
+const findUndeclaredAttribute = (requests: Array<any>, settings: SearchSettings): string | null => {
+  const declared = new Set(_.pluck(settings.facet_attributes || [], 'attribute'));
+
+  const attributeOf = (filter: string) => String(filter).split(/[:<>=!]/)[0].trim();
+
+  for (const request of requests) {
+    const params = request?.params || {};
+
+    // Algolia's free-form filter string is not supported at all.
+    if (params.filters) {
+      return 'filters';
+    }
+
+    // InstantSearch sends `facets` as an array, or as a bare string for its
+    // per-facet (disjunctive) follow-up requests.
+    const facets = typeof params.facets === 'string' ? [params.facets] : (params.facets || []);
+
+    const named = [
+      ...facets,
+      ..._.flatten(params.facetFilters || []).map(attributeOf),
+      ..._.flatten(params.numericFilters || []).map(attributeOf),
+      ..._.flatten(params.tagFilters || []).map(() => '_tags')
+    ];
+
+    const undeclared = _.find(named, (attribute) => attribute !== '*' && !declared.has(attribute));
+
+    if (undeclared) {
+      return undeclared;
+    }
+  }
+
+  return null;
+};
+
 export const POST: APIRoute = async ({ request, url }) => {
   const connection = getConnection();
 
@@ -165,19 +212,50 @@ export const POST: APIRoute = async ({ request, url }) => {
     });
   }
 
+  const searchSettings = buildSearchSettings(searchConfig);
+  const undeclared = findUndeclaredAttribute(requests, searchSettings);
+
+  if (undeclared) {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn(`[search] refused request on undeclared attribute "${undeclared}"`, JSON.stringify(requests));
+    }
+
+    return new Response(JSON.stringify({ error: `Unsupported filter or facet attribute: ${undeclared}` }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const apiClient = Client({
     connection,
-    search_settings: buildSearchSettings(searchConfig)
+    search_settings: searchSettings
   }, {
     debug: import.meta.env.DEV
   });
 
-  const results = await apiClient.handleRequest(requests, {
-    getBaseFilters: () => buildBaseFilters({
-      projectIds: config?.core_data?.project_ids || [],
-      modelIds: searchConfig.elasticsearch?.model_ids
-    })
-  });
+  let results;
+
+  try {
+    results = await apiClient.handleRequest(requests, {
+      getBaseFilters: () => buildBaseFilters({
+        projectIds: config?.core_data?.project_ids || [],
+        modelIds: searchConfig.elasticsearch?.model_ids
+      })
+    });
+  } catch (error) {
+    /**
+     * Elasticsearch down, a mapping error, or a request shape Searchkit can't
+     * handle: a 502 with no detail, never a stack trace.
+     */
+    // eslint-disable-next-line no-console
+    console.error('[search] Elasticsearch request failed:', error instanceof Error ? error.message : error);
+
+    return new Response(JSON.stringify({ error: 'Search is unavailable.' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   return new Response(JSON.stringify(normalizeResults(results)), {
     headers: {
