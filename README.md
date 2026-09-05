@@ -55,6 +55,25 @@ npm run playwright
 
 ## Deploy to Production
 
+#### As the shared multi-tenant server
+
+One server renders every atlas: the site is resolved per request from the
+Host header (`<slug>.<OG_BASE_DOMAIN>`, `<slug>.localhost`) or `OG_SITE_SLUG`,
+and its config comes from the console's public by-slug endpoint. Build with
+
+```
+npm run build:server        # node dist/server/entry.mjs
+```
+
+and run with `OG_CONSOLE_URL`, `OG_ELASTICSEARCH_URL` and, where the
+browser-facing Core Data URL doesn't resolve from the server (a container
+beside the host), `OG_CORE_DATA_INTERNAL_URL`. The static-site prebuild
+below does not apply. The Open Geographies engine's `demo/` stack runs this
+image alongside the host.
+
+#### As a static site
+
+
 #### Create a content repository
 
 On GitHub, create a new content repository. The posts, paths, and pages records you create will be stored here, as well as any i18n, your project configuration, and default user accounts. 
