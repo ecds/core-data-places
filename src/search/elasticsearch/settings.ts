@@ -55,7 +55,6 @@ const DEFAULT_RESULT_ATTRIBUTES = [
   'slug',
   'name',
   'names',
-  'description',
   'short_description',
   'types',
   'geo',
@@ -105,6 +104,17 @@ const DEFAULT_SORTING = {
 const toRootField = (path: string) => path.split('.')[0];
 
 /**
+ * The `_source` include for a card path: a relationship part (`media.name`)
+ * stays a nested include so the rest of the summary isn't returned; a
+ * top-level path or one with an index is its root field.
+ *
+ * @param path
+ */
+const toResultField = (path: string) => (
+  /^[^.]+\.(uuid|name|inverse)$/.test(path) ? path : toRootField(path)
+);
+
+/**
  * The document paths a search's result card renders, without positional
  * indices (`people.0.name` → `people.name`).
  *
@@ -117,7 +127,13 @@ const getCardAttributes = (searchConfig: SearchConfig) => {
     card?.title,
     ...(card?.attributes || []).map((attribute) => attribute.name),
     ...(card?.tags || []).map((tag) => tag.name),
-    ...(card?.relationships || [])
+    /**
+     * A card shows a relationship as a count and names, so only those parts
+     * of the related summaries are returned — a place with ten photographs
+     * carries ten full media summaries otherwise, and a map search streams
+     * every hit to the browser.
+     */
+    ..._.flatten((card?.relationships || []).map((key) => [`${key}.uuid`, `${key}.name`, `${key}.inverse`]))
   ]).map((path) => path.replace(/\.\d+/g, ''));
 };
 
@@ -185,7 +201,7 @@ export const buildSearchSettings = (searchConfig: SearchConfig): SearchSettings 
      */
     result_attributes: _.uniq([
       ...(es?.result_attributes?.length ? es.result_attributes : DEFAULT_RESULT_ATTRIBUTES),
-      ...cardAttributes.map(toRootField),
+      ...cardAttributes.map(toResultField),
       ...(es?.facet_attributes || []).map((facet) => toRootField(normalizeFacet(facet).attribute))
     ]),
     /**
@@ -195,7 +211,7 @@ export const buildSearchSettings = (searchConfig: SearchConfig): SearchSettings 
     highlight_attributes: _.uniq([
       ...settingsSearchFields(es?.search_attributes),
       ...cardAttributes
-    ]),
+    ]).filter((path) => !path.includes('.')),
     facet_attributes: (es?.facet_attributes || []).map(normalizeFacet),
     /**
      * Map search. The map refines with InstantSearch's `insideBoundingBox`
