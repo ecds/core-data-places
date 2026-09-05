@@ -19,4 +19,6 @@ for (const path of EMPTY) {
   }
 }
 
+// A clean checkout has no content/ (the static site's content repo).
+fs.mkdirSync('./content/components', { recursive: true });
 copyComponents();
