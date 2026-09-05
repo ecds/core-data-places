@@ -1,4 +1,4 @@
-import { getAtlasConfig } from '@atlas/server';
+import { getAtlasConfig, getCoreDataUrl } from '@atlas/server';
 import { hasContentCollection } from '@root/src/content.config';
 import { getCollection, getEntry } from 'astro:content';
 import _ from 'underscore';
@@ -40,7 +40,7 @@ class Base {
    */
   get service() {
     const coreData = getAtlasConfig()?.core_data ?? {};
-    return new this.Service(coreData.url, coreData.project_ids);
+    return new this.Service(getCoreDataUrl(), coreData.project_ids);
   }
 
   /**

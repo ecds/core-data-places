@@ -47,6 +47,17 @@ export const getAtlasBranding = (): any => getAtlas().branding ?? {};
 
 export const getAtlasNavigation = (): any => getAtlas().navigation ?? null;
 
+/**
+ * The Core Data base URL for server-side calls. The atlas config's
+ * `core_data.url` is the browser-facing address (the console serves it to
+ * client islands via /config.json); when the renderer runs where that address
+ * doesn't resolve — a container beside the host, reaching it by service name
+ * — `OG_CORE_DATA_INTERNAL_URL` overrides it for the server's own fetches.
+ */
+export const getCoreDataUrl = (): string => (
+  (process.env.OG_CORE_DATA_INTERNAL_URL || getAtlasConfig()?.core_data?.url || '').replace(/\/+$/, '')
+);
+
 // ---------------------------------------------------------------------------
 // Resolution (slug -> bundle), fetched from the console's public API.
 // ---------------------------------------------------------------------------

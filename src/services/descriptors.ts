@@ -1,4 +1,4 @@
-import { getAtlasConfig } from '@atlas/server';
+import { getAtlasConfig, getCoreDataUrl } from '@atlas/server';
 import { getTranslationKey } from '@i18n/utils';
 import _ from 'underscore';
 
@@ -92,7 +92,7 @@ export const toLabels = (descriptors: Descriptor[]) => {
  */
 export const getDescriptorLabels = async () => {
   const coreData = getAtlasConfig()?.core_data ?? {};
-  const baseUrl = (coreData.url || '').replace(/\/+$/, '');
+  const baseUrl = getCoreDataUrl();
   const projectIds = _.compact(coreData.project_ids || []);
 
   if (!baseUrl || _.isEmpty(projectIds)) {
