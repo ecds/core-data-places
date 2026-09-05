@@ -4,7 +4,7 @@ import useSelectable from '@apps/search/map/useSelectable';
 import { SearchList, useCachedHits } from '@performant-software/core-data';
 import { useNavigate } from '@peripleo/peripleo';
 import { useStats } from 'react-instantsearch';
-import { getAttributes, getHitValue } from '@utils/search';
+import { getAttributes, getHitDisplayValue } from '@utils/search';
 import clsx from 'clsx';
 import { useCallback, useMemo } from 'react';
 import _ from 'underscore';
@@ -30,7 +30,7 @@ const ListView = (props: Props) => {
    * List of attributes to display in the search list
    */
   const attributes = useMemo(() => _.map(getAttributes(config), (attr) => ({
-    render: (hit) => getHitValue(hit, attr),
+    render: (hit) => getHitDisplayValue(hit, attr),
     ...attr
   })), [config]);
 

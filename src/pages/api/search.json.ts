@@ -106,10 +106,46 @@ const normalizeResults = (results: any) => ({
     hits: _.map(result?.hits || [], (hit: any) => ({
       ...hit,
       id: hit.id ?? hit.uuid,
-      record_id: hit.record_id ?? hit.objectID
+      record_id: hit.record_id ?? hit.objectID,
+      _highlightResult: completeArrayHighlights(hit)
     }))
   }))
 });
+
+const HIGHLIGHT_TAG = /<ais-highlight-0000000000\/?>/g;
+
+/**
+ * Restores the unmatched entries of an array field's highlight.
+ *
+ * Elasticsearch highlights only the array entries a query matched, and
+ * Searchkit builds `_highlightResult[field]` from those fragments alone — so
+ * under a `types` refinement a church tagged "Methodist, Methodist Church"
+ * listed just the refined term. Every source value is kept, in source order,
+ * with the highlighted version standing in where one exists.
+ *
+ * @param hit
+ */
+export const completeArrayHighlights = (hit: any) => {
+  const highlights = hit?._highlightResult;
+
+  if (!highlights) {
+    return highlights;
+  }
+
+  return _.mapObject(highlights, (highlight: any, field: string) => {
+    const source = hit[field];
+
+    if (!Array.isArray(highlight) || !Array.isArray(source) || highlight.length >= source.length) {
+      return highlight;
+    }
+
+    const byValue = _.indexBy(highlight, (entry: any) => String(entry?.value ?? '').replace(HIGHLIGHT_TAG, ''));
+
+    return _.map(source, (value: any) => (
+      byValue[String(value)] || { matchLevel: 'none', matchedWords: [], value: String(value) }
+    ));
+  });
+};
 
 /**
  * The attributes a request may facet or filter on: exactly the search's

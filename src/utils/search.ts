@@ -264,6 +264,19 @@ export const getHitValue = (hit, attr) => {
 };
 
 /**
+ * The value of a hit attribute as a card or table cell shows it: a
+ * multi-valued field (a v1 taxonomy array such as `types`) reads as a list
+ * rather than its entries run together.
+ *
+ * @param hit
+ * @param attr
+ */
+export const getHitDisplayValue = (hit, attr) => {
+  const value = getHitValue(hit, attr);
+  return Array.isArray(value) ? value.join(', ') : value;
+};
+
+/**
  * Tests whether a string contains only integers.
  *
  * @param str
