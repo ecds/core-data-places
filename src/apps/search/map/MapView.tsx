@@ -7,7 +7,7 @@ import { useGeoSearch } from '@performant-software/core-data';
 import { Map as MapUtils } from '@performant-software/geospatial';
 import { useLoadedMap, useSelectionValue } from '@peripleo/maplibre';
 import { useCurrentRoute, useNavigate } from '@peripleo/peripleo';
-import { useContext, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import _ from 'underscore';
 
 /**
@@ -109,6 +109,69 @@ const FitBounds = () => {
   return null;
 };
 
+/**
+ * The maximum viewport width, in degrees of longitude, that is sent as a
+ * refinement. Wider than this the filter is meaningless (and can wrap past the
+ * antimeridian), so it is cleared instead.
+ */
+const MAX_REFINEMENT_EXTENT = 200;
+
+/**
+ * Refines results to the map viewport while "Filter by map bounds" is on.
+ *
+ * Like `FitBounds`, this MUST render inside `<Map>`: it needs the real map
+ * instance to read bounds from and to listen to. The toggle itself lives in the
+ * facet panel, above the map, and only flips `filterByMapBounds` on the context.
+ * The refinement is InstantSearch's `insideBoundingBox`, which the search
+ * handler turns into a `geo_bounding_box` filter on the atlas's geo field.
+ */
+const ViewportRefinement = () => {
+  const { clearMapRefinement, isRefinedWithMap, refine } = useGeoSearch();
+  const map = useLoadedMap();
+
+  const { filterByMapBounds } = useContext(MapSearchContext);
+
+  const onChangeViewport = useCallback(() => {
+    const bounds = map.getBounds();
+    const northEast = bounds.getNorthEast();
+    const southWest = bounds.getSouthWest();
+
+    if (northEast.lng - southWest.lng > MAX_REFINEMENT_EXTENT) {
+      if (isRefinedWithMap()) {
+        clearMapRefinement();
+      }
+    } else {
+      refine({ northEast, southWest });
+    }
+  }, [map, isRefinedWithMap, clearMapRefinement, refine]);
+
+  useEffect(() => {
+    if (!map) {
+      return undefined;
+    }
+
+    if (filterByMapBounds) {
+      onChangeViewport();
+
+      map.on('dragend', onChangeViewport);
+      map.on('zoomend', onChangeViewport);
+
+      return () => {
+        map.off('dragend', onChangeViewport);
+        map.off('zoomend', onChangeViewport);
+      };
+    }
+
+    if (isRefinedWithMap()) {
+      clearMapRefinement();
+    }
+
+    return undefined;
+  }, [map, filterByMapBounds, onChangeViewport]);
+
+  return null;
+};
+
 const MapView = () => {
   const config = useSearchConfig();
   const navigate = useNavigate();
@@ -136,6 +199,7 @@ const MapView = () => {
       }}
     >
       <FitBounds />
+      <ViewportRefinement />
       { layerType === LayerTypes.single && (
         <SingleLayer
           data={features}

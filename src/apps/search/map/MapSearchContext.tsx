@@ -40,6 +40,8 @@ export const LayerTypes = {
 interface SearchContextType {
   allowSave: boolean;
   boundingBoxOptions: BoundingBoxOptions;
+  /** Whether results are refined to the map viewport ("Filter by map bounds"). */
+  filterByMapBounds: boolean;
   controlsClass?: string;
   features: Feature[];
   getBoundingBox(): Promise<LngLatBoundsLike>;
@@ -47,6 +49,7 @@ interface SearchContextType {
   hits: any[];
   layerType: typeof LayerTypes.single | typeof LayerTypes.multiple;
   setBoundingBoxOptions(boundingBoxOptions: BoundingBoxOptions): void;
+  setFilterByMapBounds(filterByMapBounds: boolean): void;
   setControlsClass(controlsClass: string): void;
 }
 
@@ -66,6 +69,7 @@ export const MapSearchContextProvider = ({ allowSave, children, preload }: Props
   const [boundingBoxOptions, setBoundingBoxOptions] = useState<BoundingBoxOptions>();
   const [controlsClass, setControlsClass] = useState<string>();
   const [features, setFeatures] = useState<Feature[]>([]);
+  const [filterByMapBounds, setFilterByMapBounds] = useState<boolean>(false);
   const [geometryCache, setGeometryCache] = useState<GeometryCache>({});
   const [geometries, setGeometries] = useState<any>({});
 
@@ -174,12 +178,14 @@ export const MapSearchContextProvider = ({ allowSave, children, preload }: Props
         boundingBoxOptions,
         controlsClass,
         features,
+        filterByMapBounds,
         getBoundingBox,
         getGeometry,
         hits,
         layerType,
         setBoundingBoxOptions,
-        setControlsClass
+        setControlsClass,
+        setFilterByMapBounds
       }}
     >
       { children }
