@@ -23,10 +23,14 @@ import PMTilesLayer from './PMTilesLayer';
  */
 const WhenStyleLoaded = ({ children }: { children: ReactNode }) => {
   // `useMap` (not `useLoadedMap`): the loaded flag behind `useLoadedMap` is
-  // only set by MapLibre's 'load' event, which never fires when the initial
-  // render loop stalls (observed on cold loads: style metadata fetched, no
-  // tile requests, blank canvas until a user gesture). The raw map instance
-  // is available immediately, so we can watch style readiness ourselves.
+  // set by MapLibre's 'load' event, which fires only after the first frame
+  // renders. A background tab (or an occluded window) gets no
+  // requestAnimationFrame, so in it no frame renders and 'load' never fires
+  // — the map looks stalled until the tab is shown, at which point it paints
+  // on its own. That is browser scheduling, not a render-loop fault: nothing
+  // the page does (resize, triggerRepaint) draws a frame while rAF is
+  // suspended. Style readiness, though, comes from fetches, not frames, so
+  // watching it directly lets layer children mount while still hidden.
   const map = useMap() as any;
   const [ready, setReady] = useState(false);
 
@@ -38,11 +42,6 @@ const WhenStyleLoaded = ({ children }: { children: ReactNode }) => {
     const onReady = () => {
       if (cancelled) return;
       setReady(true);
-
-      // Kick the render loop: a map whose 'load' never fired has not
-      // requested tiles or painted; resize + repaint restarts it.
-      map.resize?.();
-      map.triggerRepaint?.();
     };
 
     if (typeof map.isStyleLoaded === 'function' && map.isStyleLoaded()) {
@@ -52,17 +51,12 @@ const WhenStyleLoaded = ({ children }: { children: ReactNode }) => {
 
     map.once?.('load', onReady);
 
-    // Fallback poll: 'load'/'styledata' can be missed entirely when the
-    // event fired before we attached, or never fires on a stalled loop.
-    // Kick the render loop on every tick while waiting — a stalled map has
-    // fetched style metadata but never requests tiles or paints.
+    // Fallback poll: 'load'/'styledata' can be missed when the event fired
+    // before we attached, and 'load' waits on a frame (see above).
     const interval = setInterval(() => {
       if (map.isStyleLoaded?.()) {
         clearInterval(interval);
         onReady();
-      } else {
-        map.resize?.();
-        map.triggerRepaint?.();
       }
     }, 250);
 
