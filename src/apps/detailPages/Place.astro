@@ -2,13 +2,14 @@
 import RecordDetail from '@apps/detailPages/RecordDetail.astro';
 import PageStoreProvider from '@components/PageStoreProvider';
 import { getAtlasConfig } from '@atlas/server';
+import { getExclusions } from '@utils/exclusions';
 import PlacesService from '@services/coreData/places';
 import { CoreData as CoreDataUtils } from '@performant-software/core-data/ssr';
 
 const { lang, uuid } = Astro.props;
 
 const { place } = await PlacesService.getOne(uuid);
-const excludes = getAtlasConfig().result_filtering?.places?.exclude || [];
+const excludes = getExclusions(getAtlasConfig(), 'places');
 
 const geometry = excludes.includes('place_geometry')
   ? null

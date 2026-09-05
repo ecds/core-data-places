@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { getExclusions } from '@utils/exclusions';
 import OrganizationsService from '@backend/api/coreData/organizations';
 import TranslationContext from '@contexts/TranslationContext';
 import { useRuntimeConfig } from '@peripleo/peripleo';
@@ -27,7 +28,7 @@ const Organization = (props: Props) => {
       className={props.className}
       icon='participants'
       name='organization'
-      exclusions={config.result_filtering?.organizations?.exclude}
+      exclusions={getExclusions(config, 'organizations')}
       renderItem={(organization) => (
         <p
           className='text-sm'

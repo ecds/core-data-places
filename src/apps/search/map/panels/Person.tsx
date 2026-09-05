@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { getExclusions } from '@utils/exclusions';
 import PeopleService from '@backend/api/coreData/people';
 import TranslationContext from '@contexts/TranslationContext';
 import { useRuntimeConfig } from '@peripleo/peripleo';
@@ -35,7 +36,7 @@ const Person = (props: Props) => {
       className={props.className}
       icon='person'
       name='person'
-      exclusions={config.result_filtering?.people?.exclude}
+      exclusions={getExclusions(config, 'people')}
       renderName={renderName}
       resolveDetailPageUrl={resolveDetailPageUrl}
       service={PeopleService}

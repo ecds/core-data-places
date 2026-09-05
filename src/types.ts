@@ -117,6 +117,14 @@ export interface Configuration {
   detail_pages?: {
     models: {
       [key in Models]: {
+        /**
+         * Fields hidden on the detail page and the search panel: user-defined
+         * fields by uuid, label or parameterized name (`legacy_id`), or
+         * top-level attributes/relationship groups by key. Unioned with the
+         * older `result_filtering.<model>.exclude` (see utils/exclusions.ts).
+         */
+        exclude?: string[],
+
         related_manifest?: {
           model: string,
           relationship: string

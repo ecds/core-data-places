@@ -3,13 +3,14 @@ import RecordDetail from '@apps/detailPages/RecordDetail.astro';
 import { getTranslations } from '@backend/i18n';
 import PageStoreProvider from '@components/PageStoreProvider';
 import { getAtlasConfig } from '@atlas/server';
+import { getExclusions } from '@utils/exclusions';
 import { FuzzyDate as FuzzyDateUtils } from '@performant-software/shared-components';
 import EventsService from '@services/coreData/events';
 
 const { lang, uuid } = Astro.props;
 
 const { event } = await EventsService.getOne(uuid);
-const excludes = getAtlasConfig().result_filtering?.events?.exclude || [];
+const excludes = getExclusions(getAtlasConfig(), 'events');
 
 const { t } = await getTranslations(lang);
 

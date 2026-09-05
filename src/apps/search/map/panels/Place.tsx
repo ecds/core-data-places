@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { getExclusions } from '@utils/exclusions';
 import PlacesService from '@backend/api/coreData/places';
 import TranslationContext from '@contexts/TranslationContext';
 import { CoreData as CoreDataUtils, PlaceLayersSelector } from '@performant-software/core-data';
@@ -21,7 +22,7 @@ const Place = (props: Props) => {
   const config = useRuntimeConfig();
   const { lang, t } = useContext(TranslationContext);
 
-  const exclusions = config.result_filtering?.places?.exclude || [];
+  const exclusions = getExclusions(config, 'places');
 
   /**
    * Resolves the URL for the detail page.

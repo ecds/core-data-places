@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { getExclusions } from '@utils/exclusions';
 import InstancesService from '@backend/api/coreData/instances';
 import TranslationContext from '@contexts/TranslationContext';
 import { useRuntimeConfig } from '@peripleo/peripleo';
@@ -26,7 +27,7 @@ const Instance = (props: Props) => {
     <BasePanel
       className={props.className}
       name='instance'
-      exclusions={config.result_filtering?.instances?.exclude}
+      exclusions={getExclusions(config, 'instances')}
       resolveDetailPageUrl={resolveDetailPageUrl}
       service={InstancesService}
     />

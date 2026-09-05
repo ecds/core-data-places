@@ -27,6 +27,7 @@ import _ from 'underscore';
 import PanelHistoryContext from '@apps/search/map/PanelHistoryContext';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { kilometersToMiles } from '@utils/map';
+import { omitExcluded } from '@utils/exclusions';
 import { Map as MapUtils } from '@performant-software/geospatial';
 
 interface Props {
@@ -180,10 +181,7 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
    let item;
    
    if (data) {
-     item = {
-       ..._.omit(data[props.name], ...exclude),
-       user_defined: _.omit(data[props.name].user_defined, ...exclude)
-      }
+     item = omitExcluded(data[props.name], exclude);
     }
 
     return item;

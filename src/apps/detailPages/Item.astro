@@ -2,12 +2,13 @@
 import RecordDetail from '@apps/detailPages/RecordDetail.astro';
 import PageStoreProvider from '@components/PageStoreProvider';
 import { getAtlasConfig } from '@atlas/server';
+import { getExclusions } from '@utils/exclusions';
 import ItemsService from '@services/coreData/items';
 
 const { lang, uuid } = Astro.props;
 
 const { item } = await ItemsService.getOne(uuid);
-const excludes = getAtlasConfig().result_filtering?.items?.exclude || [];
+const excludes = getExclusions(getAtlasConfig(), 'items');
 
 ---
 

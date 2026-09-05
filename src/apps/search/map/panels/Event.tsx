@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { getExclusions } from '@utils/exclusions';
 import EventsService from '@backend/api/coreData/events';
 import TranslationContext from '@contexts/TranslationContext';
 import { FuzzyDate as FuzzyDateUtils } from '@performant-software/shared-components';
@@ -60,7 +61,7 @@ const Event = (props: Props) => {
       className={props.className}
       icon='date'
       name='event'
-      exclusions={config.result_filtering?.events?.exclude}
+      exclusions={getExclusions(config, 'events')}
       renderItem={(event) => (
         <div
           className='text-sm'

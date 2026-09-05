@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { getExclusions } from '@utils/exclusions';
 import ItemsService from '@backend/api/coreData/items';
 import TranslationContext from '@contexts/TranslationContext';
 import { useRuntimeConfig } from '@peripleo/peripleo';
@@ -26,7 +27,7 @@ const Item = (props: Props) => {
     <BasePanel
       className={props.className}
       name='item'
-      exclusions={config.result_filtering?.items?.exclude}
+      exclusions={getExclusions(config, 'items')}
       resolveDetailPageUrl={resolveDetailPageUrl}
       service={ItemsService}
     />
