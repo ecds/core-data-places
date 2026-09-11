@@ -95,7 +95,9 @@ const getIndexNames = (requests: Array<any>) => (
  * against. Every hit needs `id` (the record UUID, which the panels and detail
  * links address records by) and `record_id` (the map feature id). A v1 document
  * carries `uuid` and no `id`; Searchkit exposes the document `_id` as
- * `objectID`, which is the connector's numeric record id.
+ * `objectID`. Since the lower engine's `search_document_id` fix (2026-09-11)
+ * the `_id` is the record's uuid — before that it was the numeric record id,
+ * unique only within one model — so `id` and `record_id` now agree.
  *
  * @param results
  */
