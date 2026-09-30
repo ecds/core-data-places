@@ -1,0 +1,61 @@
+---
+import Container from '@components/Container.astro';
+import { markdownToHtml, resolveAssetPath } from '@utils/html';
+import clsx from 'clsx';
+import SectionButton from './SectionButton.astro';
+
+/**
+ * Markdown text beside an image (image on the left or right; stacked, image
+ * first, on narrow screens), with an optional heading and button.
+ */
+const { assetBase, section } = Astro.props;
+
+const html = markdownToHtml(section.body, { assetBase });
+const image = resolveAssetPath(section.image, assetBase);
+const imageRight = section.image_position === 'right';
+---
+
+<section
+  class='w-full py-12'
+>
+  <Container>
+    <div
+      class={clsx('grid gap-10 items-center', { 'md:grid-cols-2': image })}
+    >
+      { image && (
+        <img
+          alt={section.image_alt || ''}
+          class={clsx('w-full h-auto rounded-md object-cover', { 'md:order-2': imageRight })}
+          loading='lazy'
+          src={image}
+        />
+      )}
+      <div
+        class='flex flex-col gap-4'
+      >
+        { section.title && (
+          <h2
+            class='text-content'
+          >
+            { section.title }
+          </h2>
+        )}
+        { html && (
+          <div
+            class='prose prose-lg max-w-none text-content'
+            set:html={html}
+          />
+        )}
+        { section.button_text && section.button_url && (
+          <div>
+            <SectionButton
+              href={section.button_url}
+              label={section.button_text}
+              primary
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  </Container>
+</section>

@@ -1,7 +1,11 @@
 ---
+import { getAssetBase } from '@atlas/server';
+import { sanitizeHtml } from '@utils/html';
+
 /**
- * Renders a WordPress document's rendered HTML (`content.rendered`) with baseline
- * longform typography. Shared by the standalone page route (Page.astro) and the
+ * Renders a WordPress document's rendered HTML (`content.rendered`), sanitized
+ * (the WordPress host is set per atlas, so its HTML is tenant-controlled), with
+ * baseline longform typography. Shared by the standalone page route (Page.astro) and the
  * per-record detail integration (WordPressContent.astro). Renders nothing when
  * there is no content, so callers can mount it unconditionally.
  */
@@ -10,13 +14,15 @@ interface Props {
 }
 
 const { content } = Astro.props;
+
+const html = sanitizeHtml(content, { assetBase: getAssetBase() });
 ---
 
-{ content && (
+{ html && (
   <div class='py-6'>
     <div
       class='wp-content max-w-none'
-      set:html={content}
+      set:html={html}
     />
   </div>
 ) }

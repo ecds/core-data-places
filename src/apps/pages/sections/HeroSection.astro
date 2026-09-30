@@ -1,0 +1,84 @@
+---
+import SearchBar from '@apps/pages/SearchBar';
+import Container from '@components/Container.astro';
+import { resolveAssetPath } from '@utils/html';
+import clsx from 'clsx';
+import SectionButton from './SectionButton.astro';
+
+/**
+ * A banner: the page's title over the brand color or a darkened image, with
+ * an optional subtitle, search box (into the atlas's first search) and
+ * button. On the home page it is taller and uses the hero type size.
+ */
+const {
+  assetBase,
+  fallbackTitle,
+  home,
+  searchName,
+  searchLabel,
+  section
+} = Astro.props;
+
+const image = resolveAssetPath(section.image, assetBase);
+const title = section.title || fallbackTitle;
+---
+
+<section
+  class={clsx(
+    'relative w-full flex items-center overflow-hidden',
+    image ? 'text-white' : 'bg-primary text-text-primary',
+    home ? 'min-h-[440px] lg:min-h-[520px]' : 'min-h-[220px]'
+  )}
+>
+  { image && (
+    <>
+      <img
+        alt={section.image_alt || ''}
+        class='absolute inset-0 w-full h-full object-cover'
+        src={image}
+      />
+      <div
+        aria-hidden='true'
+        class='absolute inset-0 bg-black/50'
+      />
+    </>
+  )}
+  <Container
+    className='relative z-10 w-full py-16'
+  >
+    <div
+      class='flex flex-col items-center text-center gap-6 max-w-3xl mx-auto'
+    >
+      <h1
+        class={clsx('banner-header banner-hero leading-tight m-0', { 'banner-home': home })}
+      >
+        { title }
+      </h1>
+      { section.subtitle && (
+        <p
+          class='text-lg md:text-xl font-light max-w-2xl'
+        >
+          { section.subtitle }
+        </p>
+      )}
+      { section.search && searchName && (
+        <div
+          class='w-full flex justify-center text-base'
+        >
+          <SearchBar
+            buttonText={searchLabel}
+            placeholder={section.search_placeholder}
+            searchName={searchName}
+            client:only='react'
+          />
+        </div>
+      )}
+      { section.button_text && section.button_url && (
+        <SectionButton
+          href={section.button_url}
+          label={section.button_text}
+        />
+      )}
+    </div>
+  </Container>
+</section>

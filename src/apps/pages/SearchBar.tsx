@@ -17,7 +17,7 @@ const SearchBar = (props: SearchBarProps) => {
   const onSubmit = useCallback((e: any) => {
     e.preventDefault();
     if (query) {
-      window.location.href = `/${language}/search/${searchName}?q=${query}`;
+      window.location.href = `/${language}/search/${searchName}?q=${encodeURIComponent(query)}`;
     }
   }, [searchName, query, language]);
 

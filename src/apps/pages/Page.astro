@@ -2,15 +2,14 @@
 import { getAtlasConfig } from '@atlas/server';
 import { fetchWordPressDocument } from '@backend/wordpress';
 import Container from '@components/Container.astro';
-import PageStoreProvider from '@components/PageStoreProvider';
 import WordPressBody from '@components/WordPressBody.astro';
 import { setCacheControl } from '@utils/url';
 
 /**
- * A standalone longform page, fetched by slug from the atlas's WordPress
- * (`config.wordpress.host`). Replaces the old TinaCMS page-builder body
- * (migration step 2). 404s when no WordPress host is configured or no page
- * matches the slug, so the chrome degrades cleanly.
+ * A longform page fetched by slug from the atlas's WordPress
+ * (`config.wordpress.host`): the fallback for /pages/:slug when the console
+ * has no page by that address, and the WordPress body under a home page.
+ * Renders nothing when no page matches.
  */
 const { slug } = Astro.props;
 
@@ -22,20 +21,13 @@ const page = await fetchWordPressDocument({
   value: slug
 });
 
-if (!page?.content) {
-  return new Response(null, { status: 404 });
-}
-
 setCacheControl(Astro.response.headers);
 ---
 
-<Container
-  className='py-12 w-full'
->
-  <WordPressBody content={page.content} />
-</Container>
-
-<PageStoreProvider
-  title={page.title}
-  client:load
-/>
+{ page?.content && (
+  <Container
+    className='py-12 w-full'
+  >
+    <WordPressBody content={page.content} />
+  </Container>
+)}

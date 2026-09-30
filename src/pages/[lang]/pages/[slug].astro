@@ -1,9 +1,19 @@
 ---
+import NotFound from '@apps/pages/NotFound.astro';
 import Page from '@apps/pages/Page.astro';
+import Sections from '@apps/pages/sections/Sections.astro';
+import { getAtlasConfig, getAtlasPage } from '@atlas/server';
 import { fetchPages } from '@backend/tina';
+import PageStoreProvider from '@components/PageStoreProvider';
 import config from '@config';
 import Layout from '@layouts/Layout.astro';
+import { setCacheControl } from '@utils/url';
 
+/**
+ * A standalone page (About, Credits, …): the console-owned page with this
+ * address, else the atlas's WordPress page by that slug when it has a
+ * WordPress host, else a 404.
+ */
 const { slug } = Astro.params;
 
 export const getStaticPaths = async () => {
@@ -20,15 +30,40 @@ export const getStaticPaths = async () => {
   return paths;
 };
 
+const page = getAtlasPage(slug);
+const wordpress = !page && !!getAtlasConfig().wordpress?.host;
+
+if (!page && !wordpress) {
+  Astro.response.status = 404;
+}
+
+setCacheControl(Astro.response.headers);
 ---
 
 <Layout
+  description={page?.description}
   footer
   fullscreen
-  title={slug}
+  title={page?.title}
 >
-  <Page
-    slug={slug}
-    server:defer
-  />
+  { page && (
+    <>
+      <Sections
+        page={page}
+      />
+      <PageStoreProvider
+        title={page.title}
+        client:load
+      />
+    </>
+  )}
+  { wordpress && (
+    <Page
+      slug={slug}
+      server:defer
+    />
+  )}
+  { !page && !wordpress && (
+    <NotFound />
+  )}
 </Layout>

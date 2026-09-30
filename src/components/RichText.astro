@@ -1,13 +1,15 @@
 ---
+import { getAssetBase } from '@atlas/server';
+import { sanitizeHtml } from '@utils/html';
+
 // Longform rich text. TinaCMS (its <TinaMarkdown> renderer) was removed in
-// migration step 3; longform moves to the user's WordPress in step 2 and
-// arrives as HTML. This now renders an HTML string when one is provided (the
-// WordPress shape) and nothing for the legacy Tina rich-text block shape —
-// keeping the page-builder components (Banner / FreeText / ColumnContent) that
-// use it building until step 2 wires the WordPress reads.
+// migration step 3; longform arrives as HTML. This renders an HTML string,
+// sanitized (it is tenant-controlled), and nothing for the legacy Tina
+// rich-text block shape — keeping the page-builder components (Banner /
+// FreeText / ColumnContent) that use it building.
 const { content } = Astro.props;
 
-const html = typeof content === 'string' ? content : null;
+const html = typeof content === 'string' ? sanitizeHtml(content, { assetBase: getAssetBase() }) : null;
 ---
 { html && (
   <div

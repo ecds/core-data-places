@@ -454,7 +454,7 @@
   "filterResultsBy": {
     "tinaLabel": "Filter Results by:",
     "defaultValue": "Filter Results by:"
-},
+  },
   "allPosts": {
     "tinaLabel": "All Posts",
     "defaultValue": "All Posts"
@@ -498,5 +498,17 @@
   "tags": {
     "tinaLabel": "Tags",
     "defaultValue": "Tags"
+  },
+  "pageNotFound": {
+    "tinaLabel": "Page not found",
+    "defaultValue": "Page not found"
+  },
+  "pageNotFoundBody": {
+    "tinaLabel": "Page not found text",
+    "defaultValue": "There's no page at this address."
+  },
+  "goToHomePage": {
+    "tinaLabel": "Go to the home page",
+    "defaultValue": "Go to the home page"
   }
 }

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import defaultConfig from '@config';
-import type { AtlasBundle } from './types';
+import type { AtlasBundle, AtlasContent, AtlasPage } from './types';
 
 /**
  * Server-side, per-request atlas resolution for the shared dynamic renderer.
@@ -25,7 +25,8 @@ export const FALLBACK_BUNDLE: AtlasBundle = {
   slug: null,
   config: defaultConfig,
   branding: {},
-  navigation: null
+  navigation: null,
+  content: null
 };
 
 const atlasStore = new AsyncLocalStorage<AtlasBundle>();
@@ -46,6 +47,25 @@ export const getAtlasConfig = (): any => getAtlas().config ?? FALLBACK_BUNDLE.co
 export const getAtlasBranding = (): any => getAtlas().branding ?? {};
 
 export const getAtlasNavigation = (): any => getAtlas().navigation ?? null;
+
+export const getAtlasContent = (): AtlasContent => ({
+  home: getAtlas().content?.home ?? null,
+  pages: getAtlas().content?.pages ?? []
+});
+
+/**
+ * The console-owned page with `slug`, or undefined.
+ */
+export const getAtlasPage = (slug: string | undefined): AtlasPage | undefined => (
+  slug ? getAtlasContent().pages.find((page) => page.slug === slug) : undefined
+);
+
+/**
+ * The browser-facing console URL that uploaded images (stored as
+ * `/core_data/public/v1/assets/...` paths) are served from. Unlike
+ * getCoreDataUrl, never the internal override: the browser fetches these.
+ */
+export const getAssetBase = (): string => (getAtlasConfig()?.core_data?.url || '').replace(/\/+$/, '');
 
 /**
  * The Core Data base URL for server-side calls. The atlas config's
@@ -118,7 +138,8 @@ export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBund
           slug: atlas.slug ?? slug,
           config: atlas.config,
           branding: atlas.branding ?? {},
-          navigation: atlas.navigation ?? null
+          navigation: atlas.navigation ?? null,
+          content: atlas.content ?? null
         };
         cache.set(slug, { bundle, expires: Date.now() + CACHE_TTL_MS });
         return bundle;

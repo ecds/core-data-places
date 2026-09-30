@@ -1,0 +1,26 @@
+---
+import clsx from 'clsx';
+
+/**
+ * A section's call-to-action link, styled as a button in the secondary
+ * brand color (or the primary one with `primary`). External links open in
+ * a new tab.
+ */
+const { href, label, primary } = Astro.props;
+
+const external = /^https?:\/\//i.test(href);
+---
+
+<a
+  class={clsx(
+    'inline-flex items-center justify-center rounded-md px-6 py-3 font-semibold no-underline',
+    'transition duration-300 hover:bg-[linear-gradient(rgba(0,0,0,0.15),rgba(0,0,0,0.15))]',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-current',
+    primary ? 'bg-primary text-text-primary' : 'bg-secondary text-text-secondary'
+  )}
+  href={href}
+  rel={external ? 'noopener noreferrer' : undefined}
+  target={external ? '_blank' : undefined}
+>
+  { label }
+</a>

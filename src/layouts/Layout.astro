@@ -1,11 +1,12 @@
 ---
-import { getAtlasBranding } from '@atlas/server';
+import { getAssetBase, getAtlasBranding } from '@atlas/server';
 import NotificationPanel from '@components/NotificationPanel';
 import Title from '@components/Title';
 import { getLanguageFromUrl } from '@i18n/utils';
 import Footer from '@layouts/Footer.astro';
 import Header from '@layouts/Header.astro';
 import HeaderContainer from '@layouts/HeaderContainer';
+import { resolveAssetPath } from '@utils/html';
 import { useBlackText } from '@utils/layout';
 import { setCacheControl } from '@utils/url';
 import { STATIC_BUILD } from 'astro:env/client';
@@ -57,11 +58,26 @@ const layoutAlternateContentAlternate = !branding.background_alternate || useBla
 const lang = getLanguageFromUrl(Astro.url.pathname);
 
 const {
+  description,
   footer: includeFooter,
   fullscreen,
+  image,
+  title,
   titleKey,
   transparent
 } = Astro.props;
+
+// Uploaded images are console paths; the browser needs them absolute.
+const assetBase = getAssetBase();
+const logo = resolveAssetPath(branding.logo || header?.logo, assetBase);
+const favicon = resolveAssetPath(branding.favicon, assetBase) || '/favicon.svg';
+
+// The page's own title (a console page) ahead of the site title, a
+// description for search engines and link previews, and a share image
+// (the page's banner image, else the one set in branding).
+const documentTitle = title && title !== branding.title ? `${title} · ${branding.title}` : branding.title;
+const metaDescription = description || branding.description;
+const shareImage = resolveAssetPath(image || branding.share_image, assetBase);
 
 ---
 
@@ -72,12 +88,17 @@ const {
   <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel='icon' type='image/svg+xml' href='/favicon.svg' />
+    <link rel='icon' href={favicon} />
     <Title
-      defaultTitle={branding.title}
+      defaultTitle={documentTitle}
       titleKey={titleKey}
       client:load
     />
+    { metaDescription && <meta name='description' content={metaDescription} /> }
+    <meta property='og:title' content={documentTitle} />
+    { metaDescription && <meta property='og:description' content={metaDescription} /> }
+    { shareImage && <meta property='og:image' content={shareImage} /> }
+    <meta name='twitter:card' content={shareImage ? 'summary_large_image' : 'summary'} />
     <style
       is:global
       define:vars={{
@@ -115,7 +136,7 @@ const {
     >
       <Header
         fullscreen={fullscreen}
-        image={header?.logo}
+        image={logo}
         imageAlt={branding.title}
         title={header?.hide_title ? undefined : branding.title}
         transparent={transparent}
@@ -133,6 +154,7 @@ const {
     { includeFooter && (
       <Footer
         accessibilityUrl={footer?.accessibility_url}
+        credit={footer?.credit}
         custom={footer?.custom}
         customContent={footer?.custom_content}
         login={footer?.allow_login && !STATIC_BUILD}

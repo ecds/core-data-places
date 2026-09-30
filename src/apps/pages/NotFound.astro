@@ -1,0 +1,27 @@
+---
+import { getTranslations } from '@backend/i18n';
+import Container from '@components/Container.astro';
+import { getRelativeLocaleUrl } from 'astro:i18n';
+
+/**
+ * The body of a missing page (the route sets the 404 status).
+ */
+const { t } = await getTranslations(Astro.currentLocale);
+---
+
+<Container
+  className='w-full py-24'
+>
+  <div
+    class='max-w-3xl mx-auto flex flex-col gap-4 text-content'
+  >
+    <h1>{ t('pageNotFound') }</h1>
+    <p>{ t('pageNotFoundBody') }</p>
+    <a
+      class='underline underline-offset-4'
+      href={getRelativeLocaleUrl(Astro.currentLocale)}
+    >
+      { t('goToHomePage') }
+    </a>
+  </div>
+</Container>

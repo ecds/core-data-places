@@ -1,0 +1,79 @@
+---
+import { getAssetBase, getAtlasBranding, getAtlasConfig } from '@atlas/server';
+import type { AtlasPage } from '@atlas/types';
+import { getTranslations } from '@backend/i18n';
+import Container from '@components/Container.astro';
+import CallToActionSection from './CallToActionSection.astro';
+import HeroSection from './HeroSection.astro';
+import TextImageSection from './TextImageSection.astro';
+import TextSection from './TextSection.astro';
+
+/**
+ * Renders a console-owned page (the home page or a standalone page) as its
+ * sections. A standalone page that doesn't open with a banner gets its title
+ * in a plain band. A banner without a title shows the page's title (the
+ * site title on the home page), so renaming the atlas renames its home page.
+ */
+interface Props {
+  home?: boolean;
+  page: AtlasPage;
+}
+
+const { home, page } = Astro.props;
+
+const assetBase = getAssetBase();
+const branding = getAtlasBranding();
+const searchName = getAtlasConfig()?.search?.[0]?.name;
+const { t } = await getTranslations(Astro.currentLocale);
+
+const sections = page.sections || [];
+const fallbackTitle = home ? branding.title : page.title;
+const titleHeading = !home && sections[0]?.type !== 'hero' && page.title;
+---
+
+{ titleHeading && (
+  <div
+    class='w-full bg-layout-alt text-alt-content py-12'
+  >
+    <Container>
+      <h1
+        class='banner-header text-center m-0'
+      >
+        { page.title }
+      </h1>
+    </Container>
+  </div>
+)}
+
+{ sections.map((section) => (
+  <>
+    { section.type === 'hero' && (
+      <HeroSection
+        assetBase={assetBase}
+        fallbackTitle={fallbackTitle}
+        home={home}
+        searchLabel={t('search')}
+        searchName={searchName}
+        section={section}
+      />
+    )}
+    { section.type === 'text' && (
+      <TextSection
+        assetBase={assetBase}
+        section={section}
+      />
+    )}
+    { section.type === 'text_image' && (
+      <TextImageSection
+        assetBase={assetBase}
+        section={section}
+      />
+    )}
+    { section.type === 'call_to_action' && (
+      <CallToActionSection
+        assetBase={assetBase}
+        section={section}
+      />
+    )}
+  </>
+))}

@@ -1,0 +1,44 @@
+---
+import Container from '@components/Container.astro';
+import { markdownToHtml } from '@utils/html';
+import SectionButton from './SectionButton.astro';
+
+/**
+ * A centered band on the alternate background: heading, short text and a
+ * button, e.g. "Start exploring → Open the map".
+ */
+const { assetBase, section } = Astro.props;
+
+const html = markdownToHtml(section.body, { assetBase });
+---
+
+<section
+  class='w-full py-14 bg-layout-alt text-alt-content'
+>
+  <Container>
+    <div
+      class='flex flex-col items-center text-center gap-5 max-w-2xl mx-auto'
+    >
+      { section.title && (
+        <h2
+          class='banner-header m-0'
+        >
+          { section.title }
+        </h2>
+      )}
+      { html && (
+        <div
+          class='prose prose-lg max-w-none text-alt-content'
+          set:html={html}
+        />
+      )}
+      { section.button_text && section.button_url && (
+        <SectionButton
+          href={section.button_url}
+          label={section.button_text}
+          primary
+        />
+      )}
+    </div>
+  </Container>
+</section>

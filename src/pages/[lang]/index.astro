@@ -1,18 +1,21 @@
 ---
 import HomePage from '@apps/pages/HomePage.astro';
+import { getAtlasContent } from '@atlas/server';
 import config from '@config';
 import Layout from '@layouts/Layout.astro';
 import _ from 'underscore';
 
 export const getStaticPaths = () => _.map(config.i18n.locales, (lang: string) => ({ params: { lang }}));
 
+const home = getAtlasContent().home;
+const shareImage = home?.sections?.find((section) => section.type === 'hero' && section.image)?.image;
 ---
 
 <Layout
+  description={home?.description}
   footer
   fullscreen
+  image={shareImage}
 >
-  <HomePage
-    server:defer
-  />
+  <HomePage />
 </Layout>

@@ -1,10 +1,12 @@
 ---
 import { getTranslations } from '@backend/i18n';
-import { getAtlasConfig, getAtlasNavigation } from '@atlas/server';
+import { getAssetBase, getAtlasConfig, getAtlasNavigation } from '@atlas/server';
 import Container from '@components/Container.astro';
 import LinkButton from '@components/LinkButton';
 import MultiColumnContent from '@components/MultiColumnContent.astro';
+import FooterLegal from '@layouts/FooterLegal.astro';
 import NavBar from '@layouts/NavBar.astro';
+import { resolveAssetPath } from '@utils/html';
 import { getCustomNavbar, getDefaultNavbar, getPages } from '@utils/nav';
 import { toBackgroundClass } from '@utils/pageBuilder';
 import { getCurrentURL, setCacheControl } from '@utils/url';
@@ -13,6 +15,7 @@ import _ from 'underscore';
 
 const {
   accessibilityUrl,
+  credit,
   custom,
   customContent,
   login,
@@ -44,6 +47,16 @@ if (navbar && navbar.items) {
   items = getDefaultNavbar(pages, currentLocale, currentUrl?.pathname ?? '', t);
 }
 
+const legalLinks = [
+  { href: termsUrl, label: t('termsConditions') },
+  { href: privacyUrl, label: t('privacyPolicy') },
+  { href: accessibilityUrl, label: t('accessibility') }
+].filter((link) => link.href);
+
+const copyright = t('copyright', { year, name: title });
+
+const assetBase = getAssetBase();
+
 setCacheControl(Astro.response.headers);
 
 ---
@@ -55,7 +68,7 @@ setCacheControl(Astro.response.headers);
     <Container
       className='flex flex-col pt-8 items-center'
     >
-      { logos && (
+      { logos?.length > 0 && (
         <div
           class={`
             flex 
@@ -70,17 +83,17 @@ setCacheControl(Astro.response.headers);
             py-8
           `}
         >
-          { _.map(logos, (logo) => (
-            <a
-              href={logo.url || '#'}
-            >
+          { _.map(logos, (logo) => {
+            const image = (
               <img
-                alt={logo.alt}
+                alt={logo.alt || ''}
                 class='w-full h-[200px] lg:w-[200px] lg:h-[100px] object-contain'
-                src={logo.image}
+                src={resolveAssetPath(logo.image, assetBase)}
               />
-            </a>
-          ))}
+            );
+
+            return logo.url ? <a href={logo.url}>{ image }</a> : image;
+          })}
         </div>
       )}
       <div
@@ -91,6 +104,13 @@ setCacheControl(Astro.response.headers);
         >
           { title }
         </h1>
+        { credit && (
+          <p
+            class='text-center font-light pt-2'
+          >
+            { credit }
+          </p>
+        )}
         <NavBar
           className='flex w-full items-center justify-center gap-y-4 gap-x-12 py-8'
           items={items}
@@ -109,41 +129,10 @@ setCacheControl(Astro.response.headers);
           />
         </div>
       )}
-      <div
-        class='flex border-t border-neutral-500 py-4 w-full font-light'
-      >
-        <div
-          class='flex flex-col lg:flex-row items-center lg:justify-between gap-y-4 w-full text-sm px-8 lg:px-0'
-        >
-          <div
-            class='flex flex-col lg:flex-row items-center gap-y-4 lg:divide-x-1'
-          >
-            <a
-              class='lg:pe-6'
-              href={termsUrl || '#'}
-            >
-              { t('termsConditions') }
-            </a>
-            <a
-              class='lg:px-6'
-              href={privacyUrl || '#'}
-            >
-              { t('privacyPolicy') }
-            </a>
-            <a
-              class='lg:px-6'
-              href={accessibilityUrl || '#'}
-            >
-              { t('accessibility') }
-            </a>
-          </div>
-          <div
-            class='text-center'
-          >
-            { t('copyright', { year, name: title }) }
-          </div>
-        </div>
-      </div>
+      <FooterLegal
+        copyright={copyright}
+        links={legalLinks}
+      />
     </Container>
   </div>
 ) }
@@ -166,40 +155,9 @@ setCacheControl(Astro.response.headers);
       gap='large'
       t={t}
     />
-    <div
-      class='flex border-t border-neutral-500 py-6 w-full font-light z-10'
-    >
-      <div
-        class='flex flex-col lg:flex-row items-center lg:justify-between gap-y-4 w-full text-sm px-8 lg:px-0'
-      >
-        <div
-          class='flex flex-col lg:flex-row items-center gap-y-4 lg:divide-x-1'
-        >
-          <a
-            class='lg:pe-6'
-            href={termsUrl || '#'}
-          >
-            { t('termsConditions') }
-          </a>
-          <a
-            class='lg:px-6'
-            href={privacyUrl || '#'}
-          >
-            { t('privacyPolicy') }
-          </a>
-          <a
-            class='lg:px-6'
-            href={accessibilityUrl || '#'}
-          >
-            { t('accessibility') }
-          </a>
-        </div>
-        <div
-          class='text-center'
-        >
-          { t('copyright', { year, name: title })}
-        </div>
-      </div>
-    </div>
+    <FooterLegal
+      copyright={copyright}
+      links={legalLinks}
+    />
   </div>
 )}
