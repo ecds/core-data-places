@@ -17,9 +17,10 @@ interface Props {
 const UserDefinedFieldView = (props: Props) => {
   // TODO: Replace with our icons
   if (props.type === DataTypes.boolean) {
+    // The icon is decorative; the word is what assistive tech reads.
     return props.value
-      ? <CheckIcon className='h-5 w-5 inline' aria-hidden='true' />
-      : <XMarkIcon className='h-5 w-5 inline' aria-hidden='true' />;
+      ? <><CheckIcon className='h-5 w-5 inline' aria-hidden='true' /><span className='sr-only'>Yes</span></>
+      : <><XMarkIcon className='h-5 w-5 inline' aria-hidden='true' /><span className='sr-only'>No</span></>;
   }
 
   if (props.type === DataTypes.date) {

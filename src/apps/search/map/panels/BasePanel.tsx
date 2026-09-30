@@ -2,6 +2,7 @@ import ManifestThumbnail, { type Collection } from '@apps/search/ManifestThumbna
 import MapSearchContext from '@apps/search/map/MapSearchContext';
 import Base from '@backend/api/coreData/base';
 import UserDefinedFieldView from '@components/UserDefinedFieldView';
+import { hasFieldValue } from '@utils/fieldValues';
 import TranslationContext from '@contexts/TranslationContext';
 import {
   CoreData as CoreDataUtils,
@@ -401,7 +402,7 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
   const userDefined = useMemo(() => (
     _.chain(item?.user_defined || [])
       .values()
-      .filter((u) => Boolean(u.value))
+      .filter((u) => hasFieldValue(u.value))
       .map(({ label, type, value }) => ({
         label,
         value: renderUserDefined(type, value)
