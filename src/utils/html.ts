@@ -1,6 +1,7 @@
 import { micromark } from 'micromark';
 import { gfm, gfmHtml } from 'micromark-extension-gfm';
 import sanitize from 'sanitize-html';
+import { ALLOWED_ATTRIBUTES, ALLOWED_TAGS } from './htmlPolicy';
 
 /**
  * Turning curator text into HTML the renderer can put on a page.
@@ -9,9 +10,10 @@ import sanitize from 'sanitize-html';
  * page text (Markdown, via `markdownToHtml`), WordPress bodies, and RichText
  * strings. One atlas owner must not be able to run script on their visitors'
  * pages, so markup is limited to text formatting, links, images and tables;
- * links and image sources to http(s)/mailto and site paths. (Still raw: Core
- * Data rich-text field values in UserDefinedFieldView, which also renders in
- * the browser's map panel.)
+ * links and image sources to http(s)/mailto and site paths (htmlPolicy.ts).
+ * HTML rendered by React components — Core Data rich-text fields, which also
+ * render in the browser's map panel — goes through components/SafeHtml.tsx,
+ * which applies the same policy on both sides.
  *
  * Uploaded images are stored as host-relative paths
  * (`/core_data/public/v1/assets/<key>/<file>`); `assetBase` (the console's
@@ -23,22 +25,6 @@ export interface HtmlOptions {
   /** The console's public URL, prefixed to `/core_data/...` image paths. */
   assetBase?: string | null;
 }
-
-const ALLOWED_TAGS = [
-  'a', 'abbr', 'b', 'blockquote', 'br', 'caption', 'cite', 'code', 'del', 'div', 'em',
-  'figcaption', 'figure', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'li',
-  'ol', 'p', 'pre', 's', 'small', 'span', 'strong', 'sub', 'sup', 'table', 'tbody', 'td',
-  'tfoot', 'th', 'thead', 'tr', 'u', 'ul'
-];
-
-const ALLOWED_ATTRIBUTES: sanitize.IOptions['allowedAttributes'] = {
-  a: ['href', 'title', 'target', 'rel'],
-  img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
-  td: ['align', 'colspan', 'rowspan'],
-  th: ['align', 'colspan', 'rowspan', 'scope'],
-  ol: ['start'],
-  '*': ['id']
-};
 
 /**
  * Resolves an image source for the page: an uploaded asset path gets the

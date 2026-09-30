@@ -1,3 +1,4 @@
+import SafeHtml from '@components/SafeHtml';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import {
   Date as DateUtils,
@@ -37,9 +38,9 @@ const UserDefinedFieldView = (props: Props) => {
 
   if (props.type === DataTypes.richText) {
     return (
-      <div
+      <SafeHtml
         className='user-defined-field-view rich-text'
-        dangerouslySetInnerHTML={{ __html: props.value }}
+        html={props.value}
       />
     );
   }
