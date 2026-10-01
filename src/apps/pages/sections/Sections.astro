@@ -1,5 +1,5 @@
 ---
-import { getAssetBase, getAtlasBranding, getAtlasConfig } from '@atlas/server';
+import { getAssetBase, getAtlasBranding, getAtlasConfig, getAtlasImages } from '@atlas/server';
 import type { AtlasPage } from '@atlas/types';
 import { getTranslations } from '@backend/i18n';
 import Container from '@components/Container.astro';
@@ -22,6 +22,7 @@ interface Props {
 const { home, page } = Astro.props;
 
 const assetBase = getAssetBase();
+const images = getAtlasImages();
 const branding = getAtlasBranding();
 const searchName = getAtlasConfig()?.search?.[0]?.name;
 const { t } = await getTranslations(Astro.currentLocale);
@@ -50,6 +51,7 @@ const titleHeading = !home && sections[0]?.type !== 'hero' && page.title;
     { section.type === 'hero' && (
       <HeroSection
         assetBase={assetBase}
+        images={images}
         fallbackTitle={fallbackTitle}
         home={home}
         searchLabel={t('search')}
@@ -60,18 +62,21 @@ const titleHeading = !home && sections[0]?.type !== 'hero' && page.title;
     { section.type === 'text' && (
       <TextSection
         assetBase={assetBase}
+        images={images}
         section={section}
       />
     )}
     { section.type === 'text_image' && (
       <TextImageSection
         assetBase={assetBase}
+        images={images}
         section={section}
       />
     )}
     { section.type === 'call_to_action' && (
       <CallToActionSection
         assetBase={assetBase}
+        images={images}
         section={section}
       />
     )}

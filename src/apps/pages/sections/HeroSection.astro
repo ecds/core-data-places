@@ -1,7 +1,7 @@
 ---
 import SearchBar from '@apps/pages/SearchBar';
 import Container from '@components/Container.astro';
-import { resolveAssetPath } from '@utils/html';
+import { imageAttributes } from '@utils/images';
 import clsx from 'clsx';
 import SectionButton from './SectionButton.astro';
 
@@ -14,12 +14,14 @@ const {
   assetBase,
   fallbackTitle,
   home,
+  images,
   searchName,
   searchLabel,
   section
 } = Astro.props;
 
-const image = resolveAssetPath(section.image, assetBase);
+// Full width; on the home page it's what the visitor sees first.
+const image = imageAttributes(section.image, '100vw', { assetBase, images });
 const title = section.title || fallbackTitle;
 ---
 
@@ -35,7 +37,9 @@ const title = section.title || fallbackTitle;
       <img
         alt={section.image_alt || ''}
         class='absolute inset-0 w-full h-full object-cover'
-        src={image}
+        decoding='async'
+        fetchpriority={home ? 'high' : undefined}
+        {...image}
       />
       <div
         aria-hidden='true'

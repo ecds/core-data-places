@@ -1,6 +1,7 @@
 ---
 import Container from '@components/Container.astro';
-import { markdownToHtml, resolveAssetPath } from '@utils/html';
+import { markdownToHtml } from '@utils/html';
+import { imageAttributes } from '@utils/images';
 import clsx from 'clsx';
 import SectionButton from './SectionButton.astro';
 
@@ -8,10 +9,13 @@ import SectionButton from './SectionButton.astro';
  * Markdown text beside an image (image on the left or right; stacked, image
  * first, on narrow screens), with an optional heading and button.
  */
-const { assetBase, section } = Astro.props;
+const { assetBase, images, section } = Astro.props;
 
-const html = markdownToHtml(section.body, { assetBase });
-const image = resolveAssetPath(section.image, assetBase);
+const html = markdownToHtml(section.body, { assetBase, images });
+
+// Half the page container (components/Container.astro) beside the text,
+// full width when stacked.
+const image = imageAttributes(section.image, '(min-width: 1536px) 620px, (min-width: 768px) 50vw, 100vw', { assetBase, images });
 const imageRight = section.image_position === 'right';
 ---
 
@@ -27,7 +31,7 @@ const imageRight = section.image_position === 'right';
           alt={section.image_alt || ''}
           class={clsx('w-full h-auto rounded-md object-cover', { 'md:order-2': imageRight })}
           loading='lazy'
-          src={image}
+          {...image}
         />
       )}
       <div

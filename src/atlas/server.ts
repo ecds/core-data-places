@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import defaultConfig from '@config';
+import type { AtlasImages } from '@utils/images';
 import type { AtlasBundle, AtlasContent, AtlasPage } from './types';
 
 /**
@@ -26,7 +27,8 @@ export const FALLBACK_BUNDLE: AtlasBundle = {
   config: defaultConfig,
   branding: {},
   navigation: null,
-  content: null
+  content: null,
+  images: null
 };
 
 const atlasStore = new AsyncLocalStorage<AtlasBundle>();
@@ -52,6 +54,11 @@ export const getAtlasContent = (): AtlasContent => ({
   home: getAtlas().content?.home ?? null,
   pages: getAtlas().content?.pages ?? []
 });
+
+/**
+ * The sizes and web-sized copies of the atlas's uploaded images, by key.
+ */
+export const getAtlasImages = (): AtlasImages | null => getAtlas().images ?? null;
 
 /**
  * The console-owned page with `slug`, or undefined.
@@ -139,7 +146,8 @@ export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBund
           config: atlas.config,
           branding: atlas.branding ?? {},
           navigation: atlas.navigation ?? null,
-          content: atlas.content ?? null
+          content: atlas.content ?? null,
+          images: atlas.images ?? null
         };
         cache.set(slug, { bundle, expires: Date.now() + CACHE_TTL_MS });
         return bundle;

@@ -1,12 +1,12 @@
 ---
-import { getAssetBase, getAtlasBranding } from '@atlas/server';
+import { getAssetBase, getAtlasBranding, getAtlasImages } from '@atlas/server';
 import NotificationPanel from '@components/NotificationPanel';
 import Title from '@components/Title';
 import { getLanguageFromUrl } from '@i18n/utils';
 import Footer from '@layouts/Footer.astro';
 import Header from '@layouts/Header.astro';
 import HeaderContainer from '@layouts/HeaderContainer';
-import { resolveAssetPath } from '@utils/html';
+import { findImage, imageUrlAtHeight, imageUrlAtWidth } from '@utils/images';
 import { useBlackText } from '@utils/layout';
 import { setCacheControl } from '@utils/url';
 import { STATIC_BUILD } from 'astro:env/client';
@@ -67,17 +67,22 @@ const {
   transparent
 } = Astro.props;
 
-// Uploaded images are console paths; the browser needs them absolute.
-const assetBase = getAssetBase();
-const logo = resolveAssetPath(branding.logo || header?.logo, assetBase);
-const favicon = resolveAssetPath(branding.favicon, assetBase) || '/favicon.svg';
+// Uploaded images are console paths; the browser needs them absolute, and
+// a copy of the size it's shown at: the logo is 48 px tall in both headers,
+// a favicon at most 64 px.
+const imageOptions = { assetBase: getAssetBase(), images: getAtlasImages() };
+const logo = imageUrlAtHeight(branding.logo || header?.logo, 48, imageOptions);
+const favicon = imageUrlAtWidth(branding.favicon, 64, imageOptions) || '/favicon.svg';
 
 // The page's own title (a console page) ahead of the site title, a
 // description for search engines and link previews, and a share image
 // (the page's banner image, else the one set in branding).
 const documentTitle = title && title !== branding.title ? `${title} · ${branding.title}` : branding.title;
 const metaDescription = description || branding.description;
-const shareImage = resolveAssetPath(image || branding.share_image, assetBase);
+// Link previews ask for about 1200 px.
+const shareSource = image || branding.share_image;
+const shareImage = imageUrlAtWidth(shareSource, 1200, imageOptions);
+const shareImageSize = findImage(shareSource, imageOptions)?.variants.find((variant) => shareImage?.endsWith(variant.path));
 
 ---
 
@@ -98,6 +103,8 @@ const shareImage = resolveAssetPath(image || branding.share_image, assetBase);
     <meta property='og:title' content={documentTitle} />
     { metaDescription && <meta property='og:description' content={metaDescription} /> }
     { shareImage && <meta property='og:image' content={shareImage} /> }
+    { shareImageSize && <meta property='og:image:width' content={String(shareImageSize.width)} /> }
+    { shareImageSize && <meta property='og:image:height' content={String(shareImageSize.height)} /> }
     <meta name='twitter:card' content={shareImage ? 'summary_large_image' : 'summary'} />
     <style
       is:global

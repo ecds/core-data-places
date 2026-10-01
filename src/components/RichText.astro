@@ -1,5 +1,5 @@
 ---
-import { getAssetBase } from '@atlas/server';
+import { getAssetBase, getAtlasImages } from '@atlas/server';
 import { sanitizeHtml } from '@utils/html';
 
 // Longform rich text. TinaCMS (its <TinaMarkdown> renderer) was removed in
@@ -9,7 +9,7 @@ import { sanitizeHtml } from '@utils/html';
 // FreeText / ColumnContent) that use it building.
 const { content } = Astro.props;
 
-const html = typeof content === 'string' ? sanitizeHtml(content, { assetBase: getAssetBase() }) : null;
+const html = typeof content === 'string' ? sanitizeHtml(content, { assetBase: getAssetBase(), images: getAtlasImages() }) : null;
 ---
 { html && (
   <div

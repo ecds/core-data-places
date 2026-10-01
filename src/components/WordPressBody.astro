@@ -1,5 +1,5 @@
 ---
-import { getAssetBase } from '@atlas/server';
+import { getAssetBase, getAtlasImages } from '@atlas/server';
 import { sanitizeHtml } from '@utils/html';
 
 /**
@@ -15,7 +15,7 @@ interface Props {
 
 const { content } = Astro.props;
 
-const html = sanitizeHtml(content, { assetBase: getAssetBase() });
+const html = sanitizeHtml(content, { assetBase: getAssetBase(), images: getAtlasImages() });
 ---
 
 { html && (

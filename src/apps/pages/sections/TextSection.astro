@@ -5,9 +5,9 @@ import { markdownToHtml } from '@utils/html';
 /**
  * A heading (optional) and Markdown text, at a readable line length.
  */
-const { assetBase, section } = Astro.props;
+const { assetBase, images, section } = Astro.props;
 
-const html = markdownToHtml(section.body, { assetBase });
+const html = markdownToHtml(section.body, { assetBase, images });
 ---
 
 <section

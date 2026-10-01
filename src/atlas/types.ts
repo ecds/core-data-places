@@ -1,3 +1,5 @@
+import type { AtlasImages } from '@utils/images';
+
 /**
  * The per-request atlas bundle: everything the shared dynamic renderer needs
  * to render one atlas, resolved by slug from the console at request time.
@@ -5,7 +7,8 @@
  * `config` is the config.json document (the same shape the old baked
  * public/config.json had); `branding` and `navigation` are the console-owned
  * chrome documents; `content` is the atlas's own pages (home page and
- * standalone pages such as About). A bundle with `slug: null` is the fallback
+ * standalone pages such as About); `images` the sizes and web-sized copies of
+ * its uploaded images (utils/images.ts). A bundle with `slug: null` is the fallback
  * used when no atlas resolves for a request (so the renderer degrades instead
  * of 500ing).
  */
@@ -15,6 +18,7 @@ export interface AtlasBundle {
   branding: any;
   navigation: any;
   content?: AtlasContent | null;
+  images?: AtlasImages | null;
 }
 
 /**

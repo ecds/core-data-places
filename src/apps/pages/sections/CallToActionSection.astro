@@ -7,9 +7,9 @@ import SectionButton from './SectionButton.astro';
  * A centered band on the alternate background: heading, short text and a
  * button, e.g. "Start exploring → Open the map".
  */
-const { assetBase, section } = Astro.props;
+const { assetBase, images, section } = Astro.props;
 
-const html = markdownToHtml(section.body, { assetBase });
+const html = markdownToHtml(section.body, { assetBase, images });
 ---
 
 <section

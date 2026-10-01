@@ -1,12 +1,12 @@
 ---
 import { getTranslations } from '@backend/i18n';
-import { getAssetBase, getAtlasConfig, getAtlasNavigation } from '@atlas/server';
+import { getAssetBase, getAtlasConfig, getAtlasImages, getAtlasNavigation } from '@atlas/server';
 import Container from '@components/Container.astro';
 import LinkButton from '@components/LinkButton';
 import MultiColumnContent from '@components/MultiColumnContent.astro';
 import FooterLegal from '@layouts/FooterLegal.astro';
 import NavBar from '@layouts/NavBar.astro';
-import { resolveAssetPath } from '@utils/html';
+import { imageAttributes } from '@utils/images';
 import { getCustomNavbar, getDefaultNavbar, getPages } from '@utils/nav';
 import { toBackgroundClass } from '@utils/pageBuilder';
 import { getCurrentURL, setCacheControl } from '@utils/url';
@@ -55,7 +55,7 @@ const legalLinks = [
 
 const copyright = t('copyright', { year, name: title });
 
-const assetBase = getAssetBase();
+const imageOptions = { assetBase: getAssetBase(), images: getAtlasImages() };
 
 setCacheControl(Astro.response.headers);
 
@@ -88,7 +88,8 @@ setCacheControl(Astro.response.headers);
               <img
                 alt={logo.alt || ''}
                 class='w-full h-[200px] lg:w-[200px] lg:h-[100px] object-contain'
-                src={resolveAssetPath(logo.image, assetBase)}
+                loading='lazy'
+                {...imageAttributes(logo.image, '(min-width: 1024px) 200px, 100vw', imageOptions)}
               />
             );
 
