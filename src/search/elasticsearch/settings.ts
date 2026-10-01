@@ -50,6 +50,8 @@ const DEFAULT_SEARCH_ATTRIBUTES = [
 
 const DEFAULT_GEO_ATTRIBUTE = 'geo.point';
 
+const THUMBNAIL_ATTRIBUTES = ['featured_media.thumbnail', 'media.thumbnail'];
+
 const DEFAULT_RESULT_ATTRIBUTES = [
   'uuid',
   'slug',
@@ -202,6 +204,8 @@ export const buildSearchSettings = (searchConfig: SearchConfig): SearchSettings 
     result_attributes: _.uniq([
       ...(es?.result_attributes?.length ? es.result_attributes : DEFAULT_RESULT_ATTRIBUTES),
       ...cardAttributes.map(toResultField),
+      // The card's picture: only thumbnail addresses, not whole media summaries.
+      ...THUMBNAIL_ATTRIBUTES,
       ...(es?.facet_attributes || []).map((facet) => toRootField(normalizeFacet(facet).attribute))
     ]),
     /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPhotoField, getPhotoUrl } from '../src/utils/photos';
+import { getHitThumbnail, getPhotoField, getPhotoUrl } from '../src/utils/photos';
 
 const PHOTO = 'https://tile.loc.gov/storage-services/service/pnp/habshaer/ga/ga0100/ga0141/photos/056098pv.jpg';
 
@@ -28,5 +28,26 @@ describe('photos', () => {
     expect(getPhotoUrl(record, 'missing')).toBeNull();
     expect(getPhotoUrl(record, 'bad')).toBeNull();
     expect(getPhotoUrl({}, 'photo')).toBeNull();
+  });
+});
+
+describe('getHitThumbnail', () => {
+  const THUMB = 'https://iiif-cloud.ecds.io/public/resources/0b7c/thumbnail';
+
+  it('reads the featured media thumbnail, single or listed', () => {
+    expect(getHitThumbnail({ featured_media: { uuid: 'm1', thumbnail: THUMB } })).toBe(THUMB);
+    expect(getHitThumbnail({ featured_media: [{ thumbnail: ` ${THUMB} ` }, { thumbnail: 'https://x.test/2' }] })).toBe(THUMB);
+  });
+
+  it('falls back to the first media item with a thumbnail', () => {
+    expect(getHitThumbnail({ media: [{ uuid: 'a' }, { thumbnail: THUMB }] })).toBe(THUMB);
+    expect(getHitThumbnail({ featured_media: { thumbnail: THUMB }, media: [{ thumbnail: 'https://x.test/other' }] })).toBe(THUMB);
+  });
+
+  it('is null without one, or for an address that is not http(s)', () => {
+    expect(getHitThumbnail({})).toBeNull();
+    expect(getHitThumbnail({ featured_media: { content_url: THUMB } })).toBeNull();
+    expect(getHitThumbnail({ featured_media: { thumbnail: 'javascript:alert(1)' } })).toBeNull();
+    expect(getHitThumbnail({ featured_media: { thumbnail: '//evil.test/x.jpg' } })).toBeNull();
   });
 });

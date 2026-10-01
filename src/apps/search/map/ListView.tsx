@@ -4,6 +4,7 @@ import useSelectable from '@apps/search/map/useSelectable';
 import { SearchList, useCachedHits } from '@performant-software/core-data';
 import { useNavigate } from '@peripleo/peripleo';
 import { useStats } from 'react-instantsearch';
+import { getHitThumbnail } from '@utils/photos';
 import { getAttributes, getHitDisplayValue } from '@utils/search';
 import clsx from 'clsx';
 import { useCallback, useMemo } from 'react';
@@ -42,17 +43,41 @@ const ListView = (props: Props) => {
   }, []);
 
   /**
-   * Renders the title for the passed item.
+   * Renders the title for the passed item, with the place's photo beside it
+   * when it has one (its featured media's IIIF thumbnail). The picture is
+   * decorative: the title says what it shows.
    */
-  const renderItemTitle = useCallback((item) => (
-    <SearchHighlight
-      attribute={config.result_card.title}
-      classNames={{
-        highlight: 'text-sm line-clamp-3 leading-6'
-      }}
-      hit={item}
-    />
-  ), [config]);
+  const renderItemTitle = useCallback((item) => {
+    const thumbnail = getHitThumbnail(item);
+    const title = (
+      <SearchHighlight
+        attribute={config.result_card.title}
+        classNames={{
+          highlight: 'text-sm line-clamp-3 leading-6'
+        }}
+        hit={item}
+      />
+    );
+
+    if (!thumbnail) {
+      return title;
+    }
+
+    return (
+      <div
+        className='flex items-start gap-3'
+      >
+        <img
+          alt=''
+          className='w-14 h-14 shrink-0 rounded-sm object-cover bg-neutral-200'
+          decoding='async'
+          loading='lazy'
+          src={thumbnail}
+        />
+        { title }
+      </div>
+    );
+  }, [config]);
 
   return (
     <aside

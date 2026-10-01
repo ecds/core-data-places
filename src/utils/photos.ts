@@ -1,3 +1,4 @@
+import _ from 'underscore';
 import { parameterize } from './exclusions';
 import { isSafeUrl } from './htmlPolicy';
 
@@ -38,3 +39,25 @@ export const getPhotoUrl = (record: any, field: string | null | undefined): stri
 
   return /^https?:\/\//i.test(url) && isSafeUrl(url, 'img') ? url : null;
 };
+
+const first = (value: any) => (Array.isArray(value) ? value[0] : value);
+
+const thumbnailOf = (media: any): string | null => {
+  const url = typeof media?.thumbnail === 'string' ? media.thumbnail.trim() : '';
+  return /^https?:\/\//i.test(url) && isSafeUrl(url, 'img') ? url : null;
+};
+
+/**
+ * A search hit's thumbnail: its featured media's IIIF thumbnail
+ * (`featured_media.thumbnail` — a place's photo copied onto the atlas's
+ * image server, or media a curator ticked "featured"), else its first
+ * media item's, or null.
+ *
+ * The fallback is needed today: the indexer keys the canonical Media
+ * relationship's featured item as `medium` (the relationship name,
+ * singularized) rather than the mapping's `featured_media`.
+ */
+export const getHitThumbnail = (hit: any): string | null => (
+  thumbnailOf(first(hit?.featured_media)) ||
+  thumbnailOf(_.find(Array.isArray(hit?.media) ? hit.media : [hit?.media], thumbnailOf))
+);
