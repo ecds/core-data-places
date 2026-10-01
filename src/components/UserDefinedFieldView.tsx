@@ -25,8 +25,14 @@ const UserDefinedFieldView = (props: Props) => {
       : <><XMarkIcon className='h-5 w-5 inline' aria-hidden='true' /><span className='sr-only'>No</span></>;
   }
 
+  // Only a full date is formatted; anything else ("1983-03-", stored before
+  // the upload checked dates) shows as written instead of gaining a day.
   if (props.type === DataTypes.date) {
-    return props.value && DateUtils.formatDate(props.value);
+    if (!props.value) {
+      return null;
+    }
+
+    return /^\d{4}-\d{2}-\d{2}/.test(String(props.value)) ? DateUtils.formatDate(props.value) : String(props.value);
   }
 
   if (props.type === DataTypes.fuzzyDate) {
