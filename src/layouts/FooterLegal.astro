@@ -2,11 +2,12 @@
 /**
  * The footer's bottom row: the terms/privacy/accessibility links the atlas
  * has set (unset ones are left out rather than pointing at "#"), and the
- * copyright line.
+ * atlas's copyright line when it has one. Nothing at all when neither is set.
  */
 const { copyright, links } = Astro.props;
 ---
 
+{ (links.length > 0 || copyright) && (
 <div
   class='flex border-t border-neutral-500 py-4 w-full font-light z-10'
 >
@@ -27,10 +28,13 @@ const { copyright, links } = Astro.props;
         ))}
       </div>
     )}
-    <div
-      class='text-center'
-    >
-      { copyright }
-    </div>
+    { copyright && (
+      <div
+        class='text-center'
+      >
+        { copyright }
+      </div>
+    )}
   </div>
 </div>
+)}

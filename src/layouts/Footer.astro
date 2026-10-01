@@ -15,6 +15,7 @@ import _ from 'underscore';
 
 const {
   accessibilityUrl,
+  copyright: copyrightLine,
   credit,
   custom,
   customContent,
@@ -53,7 +54,11 @@ const legalLinks = [
   { href: accessibilityUrl, label: t('accessibility') }
 ].filter((link) => link.href);
 
-const copyright = t('copyright', { year, name: title });
+// The atlas's own rights line (branding.footer.copyright), as written, with
+// {year} filled in. None by default: upstream's "©{year} {name}. All rights
+// reserved." claimed rights the curator never chose, on public-domain
+// atlases too.
+const copyright = typeof copyrightLine === 'string' ? copyrightLine.trim().replaceAll('{year}', String(year)) : '';
 
 const imageOptions = { assetBase: getAssetBase(), images: getAtlasImages() };
 
