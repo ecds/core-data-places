@@ -1,3 +1,4 @@
+import LinkedText from '@components/LinkedText';
 import SafeHtml from '@components/SafeHtml';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import {
@@ -49,12 +50,9 @@ const UserDefinedFieldView = (props: Props) => {
     return _.isArray(props.value) ? props.value.join(', ') : props.value;
   }
 
-  if (props.type === DataTypes.string) {
-    return props.value;
-  }
-
-  if (props.type === DataTypes.text) {
-    return props.value;
+  // Web addresses in text become links (a nomination file, a source record).
+  if (props.type === DataTypes.string || props.type === DataTypes.text) {
+    return <LinkedText value={props.value} />;
   }
 
   return null;
