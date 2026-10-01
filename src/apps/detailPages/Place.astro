@@ -5,15 +5,19 @@ import { getAtlasConfig } from '@atlas/server';
 import { getExclusions } from '@utils/exclusions';
 import PlacesService from '@services/coreData/places';
 import { CoreData as CoreDataUtils } from '@performant-software/core-data/ssr';
+import { bounds } from '@utils/map';
 
 const { lang, uuid } = Astro.props;
 
 const { place } = await PlacesService.getOne(uuid);
 const excludes = getExclusions(getAtlasConfig(), 'places');
 
-const geometry = excludes.includes('place_geometry')
+// A place without coordinates (an uploaded row with no location) gets no
+// map rather than an empty one.
+const collection = excludes.includes('place_geometry')
   ? null
   : CoreDataUtils.toFeatureCollection([place]);
+const geometry = bounds(collection) ? collection : null;
 ---
 
 <RecordDetail

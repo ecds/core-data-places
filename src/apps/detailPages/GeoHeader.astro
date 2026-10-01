@@ -1,8 +1,11 @@
 ---
 import PlaceMap from '@apps/detailPages/PlaceMap';
+import { getAtlasConfig } from '@atlas/server';
 import Container from '@components/Container.astro';
 import ServiceFactory from '@services/coreData/factory';
 import { getCoverImage } from '@utils/detailPages';
+import { bounds } from '@utils/map';
+import { getPhotoField, getPhotoUrl } from '@utils/photos';
 
 interface Props {
   geometry?: any;
@@ -12,12 +15,18 @@ interface Props {
   record: any;
 }
 
-const { geometry, lang, record, model, name } = Astro.props;
+const { geometry: data, lang, record, model, name } = Astro.props;
+
+// A map only when there's something to show on it: a record without
+// coordinates gets its cover image (if any), not an empty map.
+const geometry = bounds(data) ? data : null;
 
 const service = ServiceFactory.getService(model);
 const { mediaContents } = await service.getRelatedMediaContents(record.uuid);
 
-const coverUrl = getCoverImage(mediaContents);
+// A media item's image, else the place's own photo field (an upload's Photo
+// column).
+const coverUrl = getCoverImage(mediaContents) || getPhotoUrl(record, getPhotoField(getAtlasConfig(), model));
 ---
 {(geometry || coverUrl) && (
   <div class='w-full pb-6 relative h-[300px]'>

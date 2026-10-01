@@ -1,5 +1,6 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
 import { getExclusions } from '@utils/exclusions';
+import { getPhotoField } from '@utils/photos';
 import PlacesService from '@backend/api/coreData/places';
 import TranslationContext from '@contexts/TranslationContext';
 import { CoreData as CoreDataUtils, PlaceLayersSelector } from '@performant-software/core-data';
@@ -54,6 +55,7 @@ const Place = (props: Props) => {
       icon='location'
       name='place'
       exclusions={exclusions}
+      photoField={getPhotoField(config, 'places')}
       renderItem={(place) => (
         <>
           { !exclusions.includes('place_layers') && !_.isEmpty(place?.place_layers) && (

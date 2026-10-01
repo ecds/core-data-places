@@ -27,6 +27,7 @@ import _ from 'underscore';
 import PanelHistoryContext from '@apps/search/map/PanelHistoryContext';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { omitExcluded } from '@utils/exclusions';
+import { getPhotoUrl } from '@utils/photos';
 import { Map as MapUtils } from '@performant-software/geospatial';
 
 interface Props {
@@ -34,6 +35,8 @@ interface Props {
   icon?: string;
   name: string;
   exclusions?: string[];
+  /** The field holding the record's photo address (utils/photos.ts). */
+  photoField?: string | null;
   renderItem?: (item: any) => JSX.Element;
   renderName?: (item: any) => string;
   resolveDetailPageUrl?: (item: any) => string;
@@ -202,7 +205,9 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
         return mediaContents[0].content_preview_url
       }
 
-      return null
+      // The record's own photo field. Read from the record as loaded: the
+      // field is excluded from the panel's field list.
+      return getPhotoUrl(data?.[props.name], props.photoField)
     })
   }, [item, mediaContentsLoading])
   
