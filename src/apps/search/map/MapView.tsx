@@ -4,9 +4,10 @@ import SingleLayer from '@apps/search/map/SingleLayer';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import Map from '@components/Map';
 import { useGeoSearch } from '@performant-software/core-data';
-import { Map as MapUtils } from '@performant-software/geospatial';
+import { LocationMarkers, Map as MapUtils } from '@performant-software/geospatial';
 import { useLoadedMap, useSelectionValue } from '@peripleo/maplibre';
 import { useCurrentRoute, useNavigate } from '@peripleo/peripleo';
+import { showPlace } from '@utils/map';
 import { useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import _ from 'underscore';
 
@@ -172,6 +173,52 @@ const ViewportRefinement = () => {
   return null;
 };
 
+/**
+ * Draws the place of the record whose panel is open and moves the map to it
+ * (unless the atlas turned `zoom_to_place` off): a boundary or route fitted
+ * to its extent, a point centred at street level, both clear of the result
+ * list and the panel.
+ *
+ * Like `FitBounds`, this MUST render inside `<Map>`. The panel sets
+ * `selectedPlace` from outside it, where `useLoadedMap()` has no map, which
+ * is why the panel's own marker layer never appeared and the map never moved.
+ */
+const SelectedPlace = () => {
+  const config = useSearchConfig();
+  const map = useLoadedMap();
+
+  const { boundingBoxOptions, selectedPlace } = useContext(MapSearchContext);
+
+  useEffect(() => {
+    if (map && selectedPlace && _.get(config.map, 'zoom_to_place', true)) {
+      showPlace(map, selectedPlace.geometry, {
+        padding: boundingBoxOptions?.padding,
+        maxZoom: config.map?.max_zoom
+      });
+    }
+  }, [map, selectedPlace]);
+
+  if (!selectedPlace) {
+    return null;
+  }
+
+  return (
+    <LocationMarkers
+      animate={selectedPlace.animate}
+      data={selectedPlace.geometry}
+      fillStyle={{
+        type: 'fill',
+        paint: {
+          'fill-color': '#ffd546',
+          'fill-opacity': 0.4,
+        },
+      }}
+      fitBoundingBox={false}
+      layerId='current'
+    />
+  );
+};
+
 const MapView = () => {
   const config = useSearchConfig();
   const navigate = useNavigate();
@@ -210,6 +257,7 @@ const MapView = () => {
           data={features}
         />
       )}
+      <SelectedPlace />
     </Map>
   );
 };

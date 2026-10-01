@@ -5,7 +5,7 @@ import Map from '@components/Map';
 import TranslationContext from '@contexts/TranslationContext';
 import { useTranslations } from '@i18n/useTranslations';
 import { useMemo } from 'react';
-import { kilometersToMiles } from '@utils/map';
+import { hasExtent } from '@utils/map';
 import { Map as MapUtils } from '@performant-software/geospatial';
 
 interface Props {
@@ -19,18 +19,6 @@ interface Props {
 
 const PlaceMap = (props: Props) => {
   const { t } = useTranslations();
-
-  const buffer = useMemo(() => {
-    const maxRadius = Math.max(
-      props.geometry.features.map(f => f.properties?.originalProperties?.certainty_radius ?? 0)
-    );
-
-    if (maxRadius) {
-      return kilometersToMiles(maxRadius);
-    }
-
-    return undefined;
-  }, [props.geometry.features]);
 
   const mapGeometry = useMemo(() => {
     if (props.geometry) {
@@ -52,6 +40,18 @@ const PlaceMap = (props: Props) => {
     }
   }, [props.geometry])
 
+  /**
+   * A point is shown with a couple of miles around it (LocationMarkers'
+   * default buffer). Anything with an extent — a district's boundary, a
+   * route, several points, an uncertainty circle — is framed by that extent,
+   * not lost as a speck inside a two-mile margin.
+   */
+  const framing = useMemo(() => (
+    hasExtent(mapGeometry)
+      ? { buffer: 0, boundingBoxOptions: { animate: false, padding: 32, maxZoom: 17 } }
+      : { buffer: undefined, boundingBoxOptions: { animate: false } }
+  ), [mapGeometry]);
+
   return (
     <TranslationContext.Provider
       value={{ t, lang: props.lang }}
@@ -63,10 +63,8 @@ const PlaceMap = (props: Props) => {
         <Peripleo>
           <Map classNames={props.classNames}>
             <LocationMarkers
-              boundingBoxOptions={{
-                animate: false
-              }}
-              buffer={buffer}
+              boundingBoxOptions={framing.boundingBoxOptions}
+              buffer={framing.buffer}
               data={mapGeometry}
             />
           </Map>

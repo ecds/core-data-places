@@ -11,7 +11,6 @@ import {
   RecordDetailPanel,
   useLoader
 } from '@performant-software/core-data';
-import { LocationMarkers } from '@performant-software/geospatial';
 import { useSelection } from '@peripleo/maplibre';
 import { useCurrentRoute, useNavigate } from '@peripleo/peripleo';
 import { getNameView } from '@utils/people';
@@ -27,7 +26,6 @@ import {
 import _ from 'underscore';
 import PanelHistoryContext from '@apps/search/map/PanelHistoryContext';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
-import { kilometersToMiles } from '@utils/map';
 import { omitExcluded } from '@utils/exclusions';
 import { Map as MapUtils } from '@performant-software/geospatial';
 
@@ -61,7 +59,7 @@ const BasePanel = (props: Props) => {
 
   const exclude = props.exclusions || [];
 
-  const { boundingBoxOptions } = useContext(MapSearchContext);
+  const { setSelectedPlace } = useContext(MapSearchContext);
   
   /**
    * Transforms the passed list of items and groups them by the relationship ID.
@@ -222,7 +220,7 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
           places.filter((place) => place.place_geometry)
         ),
         properties: {
-          certainty_radius: Math.max(places.map(p => p.place_geometry?.properties?.certainty_radius || 0))
+          certainty_radius: Math.max(0, ...places.map(p => p.place_geometry?.properties?.certainty_radius || 0))
         }
       };
 
@@ -240,6 +238,18 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
 
     return null;
   }, [item, places]);
+
+  /**
+   * Hands the record's place to the map: MapView's SelectedPlace draws it and
+   * moves the map to it. Cleared when the panel closes.
+   */
+  useEffect(() => {
+    setSelectedPlace(geometryData
+      ? { geometry: geometryData.geometry, animate: !geometryData.properties?.certainty_radius }
+      : null);
+  }, [geometryData]);
+
+  useEffect(() => () => setSelectedPlace(null), []);
 
   /**
    * Memo-izes the related media items.
@@ -470,25 +480,6 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
           />
         )}
       </RecordDetailPanel>
-      { geometryData && (
-        <LocationMarkers
-          animate={!geometryData.properties?.certainty_radius}
-          boundingBoxOptions={boundingBoxOptions}
-          buffer={geometryData.properties?.certainty_radius
-            ? kilometersToMiles(geometryData.properties?.certainty_radius)
-            : undefined}
-          data={geometryData.geometry}
-          fillStyle={{
-            type: 'fill',
-            paint: {
-              'fill-color': '#ffd546',
-              'fill-opacity': 0.4,
-            },
-          }}
-          fitBoundingBox={_.get(config.map, 'zoom_to_place', true)}
-          layerId='current'
-        />
-      )}
       { manifestUrl && (
         <MediaGallery
           manifestUrl={manifestUrl}

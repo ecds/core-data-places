@@ -32,6 +32,18 @@ interface Feature {
   geometry: any;
 }
 
+/**
+ * The place of the record whose panel is open, drawn and shown on the map by
+ * MapView's `SelectedPlace` (the panel sits outside `<Map>`, where the map
+ * instance isn't reachable).
+ */
+export interface SelectedPlace {
+  /** GeoJSON FeatureCollection. */
+  geometry: any;
+  /** Pulse the marker (not for uncertainty circles). */
+  animate?: boolean;
+}
+
 export const LayerTypes = {
   single: 'single',
   multiple: 'multiple'
@@ -48,9 +60,11 @@ interface SearchContextType {
   getGeometry(id: string): Feature;
   hits: any[];
   layerType: typeof LayerTypes.single | typeof LayerTypes.multiple;
+  selectedPlace: SelectedPlace | null;
   setBoundingBoxOptions(boundingBoxOptions: BoundingBoxOptions): void;
   setFilterByMapBounds(filterByMapBounds: boolean): void;
   setControlsClass(controlsClass: string): void;
+  setSelectedPlace(selectedPlace: SelectedPlace | null): void;
 }
 
 const MapSearchContext = createContext<SearchContextType>(null);
@@ -72,6 +86,7 @@ export const MapSearchContextProvider = ({ allowSave, children, preload }: Props
   const [filterByMapBounds, setFilterByMapBounds] = useState<boolean>(false);
   const [geometryCache, setGeometryCache] = useState<GeometryCache>({});
   const [geometries, setGeometries] = useState<any>({});
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
   const config = useSearchConfig();
   const hits = useCachedHits();
@@ -183,9 +198,11 @@ export const MapSearchContextProvider = ({ allowSave, children, preload }: Props
         getGeometry,
         hits,
         layerType,
+        selectedPlace,
         setBoundingBoxOptions,
         setControlsClass,
-        setFilterByMapBounds
+        setFilterByMapBounds,
+        setSelectedPlace
       }}
     >
       { children }

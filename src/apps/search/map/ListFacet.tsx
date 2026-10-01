@@ -35,12 +35,12 @@ const ListFacet = ({ attribute, className, icon }: Props) => {
       <ul>
         { _.map(items, (item, index) => (
           <li
-            className='flex justify-between items-center hover:bg-neutral-200'
+            className='flex justify-between items-center gap-2 hover:bg-neutral-200'
             key={index}
             title={item.label}
           >
             <div
-              className='flex items-center'
+              className='flex items-center min-w-0'
             >
               <Checkbox
                 ariaLabel={item.label}
@@ -49,14 +49,14 @@ const ListFacet = ({ attribute, className, icon }: Props) => {
                 onClick={() => refine(item.value)}
               />
               <label
-                className='px-1 truncate w-[120px] hover:cursor-pointer'
+                className='px-1 py-0.5 break-words min-w-0 hover:cursor-pointer'
                 htmlFor={`${attribute}-${item.value}`}
               >
                 { item.label }
               </label>
             </div>
             <span
-              className='text-xs font-semibold px-3'
+              className='shrink-0 text-xs font-semibold px-3'
             >
               { item.count }
             </span>
