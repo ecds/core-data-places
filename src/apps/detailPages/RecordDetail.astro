@@ -83,7 +83,15 @@ const faircopyId = ecViewer && record.user_defined ? record.user_defined[ecViewe
     name={name}
     record={record}
     server:defer
-  />
+  >
+    { /* A located record always gets the 300 px map header: hold its place
+         while it loads, so the sections below don't jump down. */ }
+    { geometry && (
+      <div slot='fallback' class='w-full pb-6 h-[300px]' aria-hidden='true'>
+        <div class='bg-primary h-[80px] w-full' />
+      </div>
+    )}
+  </GeoHeader>
 )}
 { manifest && (
   <IIIFBanner

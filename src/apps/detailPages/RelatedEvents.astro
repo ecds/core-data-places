@@ -29,7 +29,7 @@ const showLinks = hasDetailPage('events', getAtlasConfig());
 ---
 {Object.keys(relationships).map((uuid) => (
   <div class='py-8 w-full'>
-    <h4 class='capitalize font-header mb-4'>{t(uuid)}</h4>
+    <h2 class='capitalize font-header mb-4 text-[length:var(--font-sizes-h4)]'>{t(uuid)}</h2>
     <ul class='flex flex-col gap-4 list-disc ml-4 max-h-[500px] overflow-y-auto'>
       {relationships[uuid].map((event) => (
         <li class='text-[22px] ml-2'>

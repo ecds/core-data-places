@@ -17,5 +17,8 @@ export const getStaticPaths = async () => await getDetailPagePaths(ModelNames.in
     lang={lang}
     uuid={uuid}
     server:defer
-  />
+  >
+    { /* Holds the page's height while the record loads, so the footer doesn't jump. */ }
+    <div slot='fallback' class='min-h-screen' aria-busy='true'></div>
+  </Instance>
 </Layout>

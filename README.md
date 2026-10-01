@@ -62,7 +62,8 @@ Host header (`<slug>.<OG_BASE_DOMAIN>`, `<slug>.localhost`) or `OG_SITE_SLUG`,
 and its config comes from the console's public by-slug endpoint. Build with
 
 ```
-npm run build:server        # node dist/server/entry.mjs
+npm run build:server        # also writes .br/.gz copies of the built assets
+npm run serve               # node scripts/serve.mjs (HOST, PORT)
 ```
 
 and run with `OG_CONSOLE_URL`, `OG_ELASTICSEARCH_URL` and, where the
@@ -70,6 +71,14 @@ browser-facing Core Data URL doesn't resolve from the server (a container
 beside the host), `OG_CORE_DATA_INTERNAL_URL`. The static-site prebuild
 below does not apply. The Open Geographies engine's `demo/` stack runs this
 image alongside the host.
+
+`scripts/serve.mjs` is Astro's standalone handler plus the Brotli/gzip copies
+`scripts/precompress.mjs` writes at build time: the adapter sends everything
+uncompressed, and the map page's scripts are ~7 MB as built (MapLibre and the
+IIIF viewers), ~2 MB compressed. A proxy in front may still compress pages.
+Each atlas also serves `/robots.txt` and `/sitemap.xml` (its pages, searches
+and published records' detail pages; an index of `/sitemap/<n>.xml` files over
+40,000 addresses), and none for a draft.
 
 #### As a static site
 

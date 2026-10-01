@@ -15,7 +15,7 @@ const { data, icon, label, resolveDetailUrl, resolveName, showLinks } = Astro.pr
 ---
 {(Object.keys(data)).length > 0 && (
   <div class='py-8 w-full'>
-    <h4 class='capitalize font-header mb-4'>{label}</h4>
+    <h2 class='capitalize font-header mb-4 text-[length:var(--font-sizes-h4)]'>{label}</h2>
     <ul class='grid grid-cols-3 items-start justify-start font-body max-h-[500px] overflow-y-auto'>
       {data.map((record) =>
         showLinks && resolveDetailUrl ? (

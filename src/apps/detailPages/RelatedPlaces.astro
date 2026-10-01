@@ -26,7 +26,7 @@ const resolveDetailUrl = (record: any) => `/${lang}/places/${record.uuid}`;
 ---
 {Object.keys(relationships).map((uuid) => (
   <div class='py-8 w-full'>
-    <h4 class='capitalize font-header mb-4'>{t(uuid)}</h4>
+    <h2 class='capitalize font-header mb-4 text-[length:var(--font-sizes-h4)]'>{t(uuid)}</h2>
     <div class='grid grid-cols-[1fr_2fr] h-[300px] bg-white w-full gap-6'>
       <ul class='items-start justify-start font-body divide-y divide-neutral-200 overflow-y-auto'>
         {relationships[uuid].map((place) =>

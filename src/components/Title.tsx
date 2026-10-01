@@ -34,9 +34,19 @@ const Title = ({ defaultTitle, titleKey }: Props) => {
     }
   }, [t, titleKey]);
 
-  return (
-    <title>{ title }</title>
-  );
+  /**
+   * Sets the document's title. The island lives in the page body: an island
+   * element inside <head> ends the head where it stands, and everything after
+   * it (meta description, link-preview tags) landed in the body, where
+   * crawlers ignore it. The server renders the first <title> itself.
+   */
+  useEffect(() => {
+    if (title) {
+      document.title = title;
+    }
+  }, [title]);
+
+  return null;
 };
 
 export default Title;
