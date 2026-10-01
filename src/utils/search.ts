@@ -121,6 +121,23 @@ export const exportAsJSON = (hits, filename = DEFAULT_JSON_FILENAME) => {
 export const getAttributes = (config) => config.result_card.attributes?.slice(0, MAX_ATTRIBUTES) || [];
 
 /**
+ * The label the atlas gave a filter (`search[].facets[].label`, set in the
+ * console: "Types" -> "Building types"), or undefined to fall back to
+ * getFacetLabel. Matches the facet by name, with or without the `.keyword`
+ * suffix an analyzed field's facet carries.
+ *
+ * @param searchConfig
+ * @param attribute
+ */
+export const getConfiguredFacetLabel = (searchConfig, attribute: string): string | undefined => {
+  const facet = _.find(searchConfig?.facets || [], (f: any) => (
+    f?.name === attribute || `${f?.name}${KEYWORD_SUFFIX}` === attribute
+  ));
+
+  return typeof facet?.label === 'string' && facet.label.trim() ? facet.label.trim() : undefined;
+};
+
+/**
  * Returns the facet label for the passed attribute.
  *
  * @param attribute

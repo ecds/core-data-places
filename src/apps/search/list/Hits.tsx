@@ -8,6 +8,7 @@ import { Highlight } from 'react-instantsearch';
 import { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import {
   getAttributes,
+  getConfiguredFacetLabel,
   getFacetLabel,
   getHitValue,
   getRelatedItems,
@@ -125,7 +126,7 @@ const Hits = (props: Props) => {
         let label = facetLabels.current[trimmedName];
 
         if (!label) {
-          label = getFacetLabel(trimmedName, t, isInverse(trimmedName, items));
+          label = getConfiguredFacetLabel(searchConfig, trimmedName) || getFacetLabel(trimmedName, t, isInverse(trimmedName, items));
           facetLabels.current[att.name] = label;
         }
 

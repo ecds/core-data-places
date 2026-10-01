@@ -1,4 +1,5 @@
 import {
+  getConfiguredFacetLabel,
   getFacetLabel,
   getHitValue,
   getRelatedItems,
@@ -133,5 +134,30 @@ describe('withGeometry', () => {
     const geometry = { type: 'Point', coordinates: [1, 2] };
     expect(withGeometry({ geometry }).geometry).toBe(geometry);
     expect(withGeometry({ uuid: 'a' })).toEqual({ uuid: 'a' });
+  });
+});
+
+describe('getConfiguredFacetLabel', () => {
+  const searchConfig = {
+    facets: [
+      { name: 'types', type: 'list', label: ' Building types ' },
+      { name: 'architect_facet', type: 'list', label: '' },
+      { name: 'denomination', type: 'list' }
+    ]
+  };
+
+  test('returns the label the atlas gave a filter, trimmed', () => {
+    expect(getConfiguredFacetLabel(searchConfig, 'types')).toBe('Building types');
+  });
+
+  test('matches a facet over a .keyword multi-field by its name', () => {
+    expect(getConfiguredFacetLabel({ facets: [{ name: 'denomination', label: 'Faith' }] }, 'denomination.keyword')).toBe('Faith');
+  });
+
+  test('falls back (undefined) for blank, missing or unknown labels', () => {
+    expect(getConfiguredFacetLabel(searchConfig, 'architect_facet')).toBeUndefined();
+    expect(getConfiguredFacetLabel(searchConfig, 'denomination')).toBeUndefined();
+    expect(getConfiguredFacetLabel(searchConfig, 'nope')).toBeUndefined();
+    expect(getConfiguredFacetLabel(undefined, 'types')).toBeUndefined();
   });
 });

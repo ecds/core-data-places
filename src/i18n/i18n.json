@@ -259,6 +259,18 @@
     "tinaLabel": "Show Less",
     "defaultValue": "show less"
   },
+  "facetSearch": {
+    "tinaLabel": "Filter Search Placeholder",
+    "defaultValue": "Find in {{label}}"
+  },
+  "facetSearchNone": {
+    "tinaLabel": "Filter Search No Match",
+    "defaultValue": "Nothing matches “{{query}}”."
+  },
+  "clearSearch": {
+    "tinaLabel": "Clear Search",
+    "defaultValue": "Clear"
+  },
   "reset": {
     "tinaLabel": "Reset",
     "defaultValue": "Reset"

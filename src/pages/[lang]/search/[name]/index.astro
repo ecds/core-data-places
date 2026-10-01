@@ -1,6 +1,7 @@
 ---
 import ListSearch from '@apps/search/list/ListSearch';
 import MapSearch from '@apps/search/map/MapSearch';
+import NotFound from '@apps/pages/NotFound.astro';
 import { getAtlasConfig } from '@atlas/server';
 import config from '@config';
 import Layout from '@layouts/Layout.astro';
@@ -14,6 +15,12 @@ const { lang, name } = Astro.params;
 // (the client search island re-reads it from the dynamic /config.json).
 const searchConfig = getAtlasConfig().search?.find((s) => s.name === name) as SearchConfig;
 const isListSearch = !!searchConfig?.type && searchConfig.type !== 'map';
+
+// A search the atlas doesn't have is a missing page, not an empty map whose
+// island throws on the undefined config.
+if (!searchConfig) {
+  Astro.response.status = 404;
+}
 
 export const getStaticPaths = () => {
   const paths = [];
@@ -29,6 +36,15 @@ export const getStaticPaths = () => {
 
 ---
 
+{ !searchConfig && (
+  <Layout
+    footer
+    fullscreen
+  >
+    <NotFound />
+  </Layout>
+)}
+{ searchConfig && (
 <Layout
   fullscreen
   titleKey='explore'
@@ -52,3 +68,4 @@ export const getStaticPaths = () => {
     )
   }
 </Layout>
+)}

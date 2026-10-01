@@ -1,6 +1,7 @@
+import SearchConfigContext from '@apps/search/SearchConfigContext';
 import TranslationContext from '@contexts/TranslationContext';
 import { Pill } from '@performant-software/core-data';
-import { getFacetLabel } from '@utils/search';
+import { getConfiguredFacetLabel, getFacetLabel } from '@utils/search';
 import { useCallback, useContext } from 'react';
 import { useCurrentRefinements } from 'react-instantsearch';
 import _ from 'underscore';
@@ -8,11 +9,14 @@ import _ from 'underscore';
 const CurrentRefinementsList = () => {
   const { items, refine } = useCurrentRefinements();
   const { t } = useContext(TranslationContext);
+  const searchConfig = useContext(SearchConfigContext)?.searchConfig;
 
   /**
    * Returns the label for the passed attribute.
    */
-  const getLabel = useCallback((attribute) => getFacetLabel(attribute, t), [t]);
+  const getLabel = useCallback((attribute) => (
+    getConfiguredFacetLabel(searchConfig, attribute) || getFacetLabel(attribute, t)
+  ), [searchConfig, t]);
 
   if (_.isEmpty(items)) {
     return null;
