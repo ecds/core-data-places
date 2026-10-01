@@ -111,7 +111,8 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => ({ '&': '
 /**
  * The answer for an address with no atlas behind it (an unknown subdomain,
  * or a draft without its preview link): a real 404, not an empty atlas.
- * Never cached, so publishing an atlas takes effect at once.
+ * Never cached by browsers or a CDN, so a newly published atlas appears as
+ * soon as the renderer's own bundle cache (30 s) refreshes.
  */
 const notFound = (url: URL, hadPreview: boolean): Response => {
   if (url.pathname.startsWith('/api/') || url.pathname.endsWith('.json')) {
