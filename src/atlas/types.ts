@@ -14,6 +14,16 @@ import type { AtlasImages } from '@utils/images';
  */
 export interface AtlasBundle {
   slug: string | null;
+  /**
+   * Served to a preview link: the atlas isn't published yet. Pages show a
+   * preview notice and are never cached or indexed.
+   */
+  preview?: boolean;
+  /**
+   * No atlas at this address (unknown, or a draft without its preview
+   * token): the renderer answers 404 rather than an empty atlas.
+   */
+  missing?: boolean;
   config: any;
   branding: any;
   navigation: any;

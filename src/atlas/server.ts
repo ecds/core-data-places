@@ -24,6 +24,7 @@ import type { AtlasBundle, AtlasContent, AtlasPage } from './types';
 // (unknown slug, console unreachable, or a request with no slug context).
 export const FALLBACK_BUNDLE: AtlasBundle = {
   slug: null,
+  preview: false,
   config: defaultConfig,
   branding: {},
   navigation: null,
@@ -59,6 +60,11 @@ export const getAtlasContent = (): AtlasContent => ({
  * The sizes and web-sized copies of the atlas's uploaded images, by key.
  */
 export const getAtlasImages = (): AtlasImages | null => getAtlas().images ?? null;
+
+/**
+ * True when the current request is a preview of an unpublished atlas.
+ */
+export const isAtlasPreview = (): boolean => getAtlas().preview === true;
 
 /**
  * The console-owned page with `slug`, or undefined.
@@ -108,6 +114,10 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
+// The fallback for an address with no atlas behind it (unknown slug, or a
+// draft without its preview token), as opposed to a console failure.
+const MISSING_BUNDLE: AtlasBundle = { ...FALLBACK_BUNDLE, missing: true };
+
 const consoleBaseUrl = (): string =>
   process.env.OG_CONSOLE_URL || process.env.CORE_DATA_URL || 'http://localhost:3001';
 
@@ -120,19 +130,22 @@ const consoleBaseUrl = (): string =>
  *   - error / non-OK 5xx  → serve the last-known-good bundle if cached, else the
  *                           fallback for a short ERROR_TTL so recovery is quick.
  */
-export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBundle> => {
+export const resolveAtlasBundle = async (slug: string | null, previewToken: string | null = null): Promise<AtlasBundle> => {
   if (!slug) {
     return FALLBACK_BUNDLE;
   }
 
-  const cached = cache.get(slug);
+  // A preview link sees the draft; everyone else gets the public answer.
+  // Cached apart, so a draft never leaks into the public cache entry.
+  const key = previewToken ? `${slug}\u0000${previewToken}` : slug;
+  const cached = cache.get(key);
   if (cached && cached.expires > Date.now()) {
     return cached.bundle;
   }
 
   try {
     const response = await fetch(`${consoleBaseUrl()}/core_data/public/v1/atlases/${encodeURIComponent(slug)}`, {
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', ...(previewToken ? { 'X-OG-Preview': previewToken } : {}) },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
     });
 
@@ -143,24 +156,25 @@ export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBund
       if (atlas?.config) {
         const bundle: AtlasBundle = {
           slug: atlas.slug ?? slug,
+          preview: atlas.preview === true,
           config: atlas.config,
           branding: atlas.branding ?? {},
           navigation: atlas.navigation ?? null,
           content: atlas.content ?? null,
           images: atlas.images ?? null
         };
-        cache.set(slug, { bundle, expires: Date.now() + CACHE_TTL_MS });
+        cache.set(key, { bundle, expires: Date.now() + CACHE_TTL_MS });
         return bundle;
       }
 
       // 200 but no usable config — treat as unknown, like a 404.
-      cache.set(slug, { bundle: FALLBACK_BUNDLE, expires: Date.now() + CACHE_TTL_MS });
-      return FALLBACK_BUNDLE;
+      cache.set(key, { bundle: MISSING_BUNDLE, expires: Date.now() + CACHE_TTL_MS });
+      return MISSING_BUNDLE;
     }
 
     if (response.status === 404) {
-      cache.set(slug, { bundle: FALLBACK_BUNDLE, expires: Date.now() + CACHE_TTL_MS });
-      return FALLBACK_BUNDLE;
+      cache.set(key, { bundle: MISSING_BUNDLE, expires: Date.now() + CACHE_TTL_MS });
+      return MISSING_BUNDLE;
     }
 
     // eslint-disable-next-line no-console
@@ -172,11 +186,11 @@ export const resolveAtlasBundle = async (slug: string | null): Promise<AtlasBund
 
   // Transient failure: prefer the last-known-good bundle (don't blank a live
   // atlas because of a console blip); otherwise retry after a short window.
-  if (cached && cached.bundle !== FALLBACK_BUNDLE) {
-    cache.set(slug, { bundle: cached.bundle, expires: Date.now() + ERROR_TTL_MS });
+  if (cached && cached.bundle !== FALLBACK_BUNDLE && cached.bundle !== MISSING_BUNDLE) {
+    cache.set(key, { bundle: cached.bundle, expires: Date.now() + ERROR_TTL_MS });
     return cached.bundle;
   }
 
-  cache.set(slug, { bundle: FALLBACK_BUNDLE, expires: Date.now() + ERROR_TTL_MS });
+  cache.set(key, { bundle: FALLBACK_BUNDLE, expires: Date.now() + ERROR_TTL_MS });
   return FALLBACK_BUNDLE;
 };
