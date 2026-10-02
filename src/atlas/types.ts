@@ -33,6 +33,11 @@ export interface AtlasBundle {
   config: any;
   branding: any;
   navigation: any;
+  /**
+   * The menu in each of the atlas's languages (navigation is the default
+   * language's).
+   */
+  navigations?: { [locale: string]: any } | null;
   content?: AtlasContent | null;
   images?: AtlasImages | null;
 }
@@ -66,4 +71,10 @@ export interface AtlasPage {
 export interface AtlasContent {
   home?: AtlasPage | null;
   pages: AtlasPage[];
+  /**
+   * The pages in the atlas's other languages, same shape; a translated page
+   * has the slug of one of `pages`. Untranslated ones show in the default
+   * language.
+   */
+  translations?: { [locale: string]: { home?: AtlasPage | null; pages?: AtlasPage[] } } | null;
 }

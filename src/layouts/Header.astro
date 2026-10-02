@@ -1,15 +1,16 @@
 ---
 import { getTranslations } from '@backend/i18n';
-import { getAtlasNavigation } from '@atlas/server';
+import { getAtlasLocales, getAtlasNavigation } from '@atlas/server';
 import LanguagePicker from '@components/LanguagePicker';
 import MobileHeader from '@components/MobileHeader';
 import NavBar from '@layouts/NavBar.astro';
 import { getCustomNavbar, getDefaultNavbar, getPages } from '@utils/nav';
 import { getCurrentURL, setCacheControl } from '@utils/url';
-import { getRelativeLocaleUrl, getRelativeLocaleUrlList } from 'astro:i18n';
+import { getRelativeLocaleUrl } from 'astro:i18n';
 import clsx from 'clsx';
 
-const locales = getRelativeLocaleUrlList();
+// The atlas's own languages, not every language the renderer can route.
+const locales = getAtlasLocales().map((locale) => getRelativeLocaleUrl(locale));
 const currentLocale = Astro.currentLocale;
 const currentUrl = getCurrentURL(Astro.request.headers);
 
@@ -27,7 +28,7 @@ const [{ t }, pages] = await Promise.all([
 ]);
 
 // Navigation is console-owned (the atlas bundle), resolved per request.
-const navbar = getAtlasNavigation();
+const navbar = getAtlasNavigation(currentLocale);
 
 let items;
 

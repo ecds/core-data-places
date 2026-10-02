@@ -37,7 +37,7 @@ const [{ t }, pages] = await Promise.all([
 ]);
 
 // Navigation + config are console-owned (the atlas bundle), resolved per request.
-const navbar = getAtlasNavigation();
+const navbar = getAtlasNavigation(currentLocale);
 const config = getAtlasConfig();
 
 let items;

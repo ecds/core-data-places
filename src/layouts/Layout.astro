@@ -1,5 +1,5 @@
 ---
-import { getAssetBase, getAtlasBranding, getAtlasContent, getAtlasImages, isAtlasPreview } from '@atlas/server';
+import { getAssetBase, getAtlasBranding, getAtlasContent, getAtlasDefaultLocale, getAtlasImages, getAtlasLocales, isAtlasPreview, localizeHref } from '@atlas/server';
 import NotificationPanel from '@components/NotificationPanel';
 import Title from '@components/Title';
 import { getLanguageFromUrl } from '@i18n/utils';
@@ -10,6 +10,7 @@ import { getTranslations } from '@backend/i18n';
 import { fontFamily, fontsHref } from '@utils/fonts';
 import { findImage, imageUrlAtHeight, imageUrlAtWidth } from '@utils/images';
 import { useBlackText } from '@utils/layout';
+import { publicOrigin } from '@utils/sitemap';
 import { setCacheControl } from '@utils/url';
 import { STATIC_BUILD } from 'astro:env/client';
 import clsx from 'clsx';
@@ -86,12 +87,20 @@ const { t: translate } = await getTranslations(lang);
 const serverTitle = (titleKey && translate(titleKey)) || documentTitle;
 // With neither, the home page banner's subtitle (the wizard's description
 // of the atlas) stands in, so no page goes without one.
-const homeSubtitle = getAtlasContent().home?.sections?.find((section) => section.type === 'hero')?.subtitle;
+const homeSubtitle = getAtlasContent(Astro.currentLocale).home?.sections?.find((section) => section.type === 'hero')?.subtitle;
 const metaDescription = description || branding.description || homeSubtitle;
 // Link previews ask for about 1200 px.
 const shareSource = image || branding.share_image;
 const shareImage = imageUrlAtWidth(shareSource, 1200, imageOptions);
 const shareImageSize = findImage(shareSource, imageOptions)?.variants.find((variant) => shareImage?.endsWith(variant.path));
+
+// The same page in the atlas's other languages, for search engines.
+const atlasLocales = getAtlasLocales();
+const pathAfterLocale = Astro.url.pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '');
+const alternates = atlasLocales.length > 1
+  ? [...atlasLocales.map((locale) => ({ hreflang: locale, locale })), { hreflang: 'x-default', locale: getAtlasDefaultLocale() }]
+    .map(({ hreflang, locale }) => ({ hreflang, href: `${publicOrigin(Astro.request)}/${locale}${pathAfterLocale || '/'}` }))
+  : [];
 
 ---
 
@@ -114,6 +123,7 @@ const shareImageSize = findImage(shareSource, imageOptions)?.variants.find((vari
     { shareImageSize && <meta property='og:image:width' content={String(shareImageSize.width)} /> }
     { shareImageSize && <meta property='og:image:height' content={String(shareImageSize.height)} /> }
     <meta name='twitter:card' content={shareImage ? 'summary_large_image' : 'summary'} />
+    { alternates.map((alternate) => <link rel='alternate' hreflang={alternate.hreflang} href={alternate.href} />) }
     <style
       is:global
       define:vars={{
@@ -181,15 +191,15 @@ const shareImageSize = findImage(shareSource, imageOptions)?.variants.find((vari
     </main>
     { includeFooter && (
       <Footer
-        accessibilityUrl={footer?.accessibility_url}
+        accessibilityUrl={localizeHref(footer?.accessibility_url, getAtlasDefaultLocale(), lang)}
         copyright={footer?.copyright}
         credit={footer?.credit}
         custom={footer?.custom}
         customContent={footer?.custom_content}
         login={footer?.allow_login && !STATIC_BUILD}
         logos={footer?.logos}
-        privacyUrl={footer?.privacy_url}
-        termsUrl={footer?.terms_url}
+        privacyUrl={localizeHref(footer?.privacy_url, getAtlasDefaultLocale(), lang)}
+        termsUrl={localizeHref(footer?.terms_url, getAtlasDefaultLocale(), lang)}
         title={branding?.title}
         server:defer
       />

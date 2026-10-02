@@ -30,7 +30,7 @@ export const getStaticPaths = async () => {
   return paths;
 };
 
-const page = getAtlasPage(slug);
+const page = getAtlasPage(slug, Astro.currentLocale);
 const wordpress = !page && !!getAtlasConfig().wordpress?.host;
 
 if (!page && !wordpress) {

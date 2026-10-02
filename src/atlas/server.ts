@@ -49,12 +49,79 @@ export const getAtlasConfig = (): any => getAtlas().config ?? FALLBACK_BUNDLE.co
 
 export const getAtlasBranding = (): any => getAtlas().branding ?? {};
 
-export const getAtlasNavigation = (): any => getAtlas().navigation ?? null;
+/**
+ * The atlas's menu in `locale` (the default language's when there's no
+ * menu for it).
+ */
+export const getAtlasNavigation = (locale?: string | null): any => (
+  (locale && getAtlas().navigations?.[locale]) || getAtlas().navigation || null
+);
 
-export const getAtlasContent = (): AtlasContent => ({
-  home: getAtlas().content?.home ?? null,
-  pages: getAtlas().content?.pages ?? []
-});
+/**
+ * The atlas's default language.
+ */
+export const getAtlasDefaultLocale = (): string => getAtlasConfig()?.i18n?.default_locale || 'en';
+
+/**
+ * The atlas's languages, default first (config.i18n.locales).
+ */
+export const getAtlasLocales = (): string[] => {
+  const defaultLocale = getAtlasDefaultLocale();
+  const listed = getAtlasConfig()?.i18n?.locales;
+
+  return [defaultLocale, ...(Array.isArray(listed) ? listed : []).filter((locale) => locale !== defaultLocale)];
+};
+
+/**
+ * A site link under the `from` language's prefix, moved to `to`'s
+ * (/en/search/places → /es/search/places); any other link as is.
+ */
+export const localizeHref = <T>(href: T, from: string, to: string): T => {
+  if (typeof href !== 'string' || from === to) {
+    return href;
+  }
+
+  return (new RegExp(`^/${from}(?=[/?#]|$)`).test(href) ? `/${to}${href.slice(from.length + 1)}` : href) as T;
+};
+
+// Markdown link targets — inline `](/en/…)` and reference `]: /en/…`.
+const localizeMarkdown = (text: string | undefined, from: string, to: string) => (
+  text?.replace(new RegExp(`(\\]\\(\\s*<?|\\]:\\s*<?)/${from}(?=[/?#)>\\s]|$)`, 'g'), `$1/${to}`)
+);
+
+const localizePage = <P extends AtlasPage | null | undefined>(page: P, from: string, to: string): P => (
+  page ? {
+    ...page,
+    sections: (page.sections ?? []).map((section) => ({
+      ...section,
+      button_url: localizeHref(section.button_url, from, to),
+      body: localizeMarkdown(section.body, from, to)
+    }))
+  } as P : page
+);
+
+/**
+ * The atlas's home page and pages in `locale`: a page's translation where
+ * it has one, else the page in the default language. Either way, site links
+ * in it point at pages in `locale`.
+ */
+export const getAtlasContent = (locale?: string | null): AtlasContent => {
+  const content = getAtlas().content;
+  const base: AtlasContent = { home: content?.home ?? null, pages: content?.pages ?? [] };
+
+  if (!locale || locale === getAtlasDefaultLocale() || !getAtlasLocales().includes(locale)) {
+    return base;
+  }
+
+  const from = getAtlasDefaultLocale();
+  const translation = content?.translations?.[locale];
+  const translated = new Map((translation?.pages ?? []).map((page) => [page.slug, page]));
+
+  return {
+    home: localizePage(translation?.home ?? base.home, from, locale),
+    pages: base.pages.map((page) => localizePage(translated.has(page.slug) ? { ...translated.get(page.slug), slug: page.slug } : page, from, locale))
+  };
+};
 
 /**
  * The sizes and web-sized copies of the atlas's uploaded images, by key.
@@ -69,8 +136,8 @@ export const isAtlasPreview = (): boolean => getAtlas().preview === true;
 /**
  * The console-owned page with `slug`, or undefined.
  */
-export const getAtlasPage = (slug: string | undefined): AtlasPage | undefined => (
-  slug ? getAtlasContent().pages.find((page) => page.slug === slug) : undefined
+export const getAtlasPage = (slug: string | undefined, locale?: string | null): AtlasPage | undefined => (
+  slug ? getAtlasContent(locale).pages.find((page) => page.slug === slug) : undefined
 );
 
 /**
@@ -196,6 +263,7 @@ const resolve = async (address: string, path: string, previewToken: string | nul
           config: atlas.config,
           branding: atlas.branding ?? {},
           navigation: atlas.navigation ?? null,
+          navigations: atlas.navigations ?? null,
           content: atlas.content ?? null,
           images: atlas.images ?? null
         };

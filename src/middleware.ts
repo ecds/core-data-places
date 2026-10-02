@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { classifyHost, domainUrl, hostnameOf } from '@atlas/hosts';
 import { resolveAtlasBundle, resolveAtlasBundleByDomain, runWithAtlas } from '@atlas/server';
+import defaultConfig from '@config';
 
 type AtlasAddress =
   | { kind: 'header' | 'subdomain' | 'env'; slug: string }
@@ -52,6 +53,29 @@ const resolveBundle = (address: AtlasAddress, previewToken: string | null) => (
     ? resolveAtlasBundleByDomain(address.domain, previewToken)
     : resolveAtlasBundle(address.slug, previewToken)
 );
+
+// The [lang] prefixes the renderer routes (Astro's i18n routing, fixed at
+// build time).
+const ROUTED_LOCALES: string[] = defaultConfig?.i18n?.locales ?? [];
+
+/**
+ * Where to send a request whose language prefix this atlas doesn't have, or
+ * null.
+ */
+const otherLanguage = (config: any, url: URL): string | null => {
+  const prefix = url.pathname.split('/')[1];
+  if (!prefix || !ROUTED_LOCALES.includes(prefix)) {
+    return null;
+  }
+
+  const defaultLocale = config?.i18n?.default_locale || 'en';
+  const locales: string[] = Array.isArray(config?.i18n?.locales) && config.i18n.locales.length ? config.i18n.locales : [defaultLocale];
+  if (locales.includes(prefix) || prefix === defaultLocale) {
+    return null;
+  }
+
+  return `/${defaultLocale}${url.pathname.slice(prefix.length + 1)}${url.search}`;
+};
 
 // --- Drafts and preview links ----------------------------------------------
 //
@@ -186,6 +210,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (bundle.missing) {
     return notFound(url, !!cookieToken);
+  }
+
+  // A language the renderer routes but this atlas isn't in (/fr/… on an
+  // English-only atlas): the same page in the atlas's default language.
+  const languageRedirect = otherLanguage(bundle.config, url);
+  if (languageRedirect && readOnly) {
+    return new Response(null, { status: 302, headers: { Location: languageRedirect, 'Cache-Control': NO_STORE } });
   }
 
   context.locals.atlas = bundle;

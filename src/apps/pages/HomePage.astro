@@ -13,7 +13,7 @@ import { setCacheControl } from '@utils/url';
  * resolved (the fallback bundle) the site title alone renders.
  */
 const branding = getAtlasBranding();
-const home = getAtlasContent().home ?? { sections: [{ type: 'hero' as const }] };
+const home = getAtlasContent(Astro.currentLocale).home ?? { sections: [{ type: 'hero' as const }] };
 const wordpressSlug = getAtlasConfig().home?.wordpress_slug;
 
 setCacheControl(Astro.response.headers);

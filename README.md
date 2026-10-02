@@ -98,6 +98,15 @@ when used. Lazy-load a package export through a one-export module of our own
 (see `src/components/MediaGallery.tsx`): a dynamic `import()` of the package
 itself needs its whole namespace and pulls everything in up front. Map page:
 8.0 → 2.9 MB of script; home/pages 0.18 MB.
+Languages: an atlas is in the languages of its `config.i18n` (default first;
+the six prefixes Astro routes). The header's picker lists those only; another
+routed prefix redirects to the default language. Pages, the home page and the
+menu come from the bundle's `content.translations[<locale>]` and
+`navigations[<locale>]`, falling back to the default language per page, with
+site links in them moved to the visitor's language; pages carry `hreflang`
+alternates. Interface text (buttons, filters) is English: the renderer's
+strings ship only English defaults and core-data's components are fixed to
+English.
 Each atlas also serves `/robots.txt` and `/sitemap.xml` (its pages, searches
 and published records' detail pages; an index of `/sitemap/<n>.xml` files over
 40,000 addresses), and none for a draft.

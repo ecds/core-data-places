@@ -7,7 +7,7 @@ import _ from 'underscore';
 
 export const getStaticPaths = () => _.map(config.i18n.locales, (lang: string) => ({ params: { lang }}));
 
-const home = getAtlasContent().home;
+const home = getAtlasContent(Astro.currentLocale).home;
 const shareImage = home?.sections?.find((section) => section.type === 'hero' && section.image)?.image;
 ---
 
