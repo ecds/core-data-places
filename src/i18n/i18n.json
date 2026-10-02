@@ -127,6 +127,14 @@
     "tinaLabel": "Overlays",
     "defaultValue": "Overlays"
   },
+  "mapYear": {
+    "tinaLabel": "Historic map year",
+    "defaultValue": "Historic map"
+  },
+  "mapYearNone": {
+    "tinaLabel": "No historic map",
+    "defaultValue": "None"
+  },
   "aboutProject": {
     "tinaLabel": "About the Project",
     "defaultValue": "About the Project"
@@ -438,6 +446,18 @@
   "Z-A": {
     "tinaLabel": "Z-A",
     "defaultValue": "Z-A"
+  },
+  "date_asc": {
+    "tinaLabel": "Oldest first",
+    "defaultValue": "Oldest first"
+  },
+  "date_desc": {
+    "tinaLabel": "Newest first",
+    "defaultValue": "Newest first"
+  },
+  "years": {
+    "tinaLabel": "Date (filter)",
+    "defaultValue": "Date"
   },
   "imageGalleries": {
     "tinaLabel": "Image Galleries",

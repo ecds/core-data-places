@@ -29,9 +29,21 @@ export interface SearchConfig {
     event_path?: string,
   };
 
+  /**
+   * The field that places this search's records in time (a top-level document
+   * key, e.g. `date_listed`): a year-range filter, date sorts, dates on the
+   * hits, and the timeline view when `timeline` is on. See
+   * src/search/elasticsearch/dates.ts.
+   */
+  dates?: {
+    field: string,
+    label?: string,
+    timeline?: boolean
+  };
+
   facets?: Array<{
     name: string,
-    type: 'list' | 'select',
+    type: 'list' | 'select' | 'range',
     icon?: string
   }>;
 
@@ -171,6 +183,15 @@ export interface Configuration {
      * georeference layers only: opacity of the warped image (0-1).
      */
     opacity?: number,
+
+    /**
+     * Overlays only: the year a historic map shows (and the last year it
+     * stands for). Two or more dated overlays get a year slider instead of
+     * the layer menu (utils/mapYears.ts).
+     */
+    start_year?: number,
+    end_year?: number,
+    default?: boolean,
 
     /**
      * pmtiles layers only: the feature property used for labels (default "name")

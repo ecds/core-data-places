@@ -88,7 +88,11 @@ export const buildTimelineData = (config: SearchConfig, data: any) => {
   let max: number;
 
   _.each(records, (record: any) => {
-    let eventData = ObjectUtils.getNestedValue(record, config.timeline?.event_path);
+    // On a dated search (no event_path) the hit itself is the event: the search
+    // handler gives it start_date/end_date (search/elasticsearch/dates.ts).
+    let eventData = config.timeline?.event_path
+      ? ObjectUtils.getNestedValue(record, config.timeline.event_path)
+      : (!_.isEmpty(record.start_date) || !_.isEmpty(record.end_date)) && record;
 
     if (eventData && !_.isArray(eventData)) {
       eventData = [eventData];

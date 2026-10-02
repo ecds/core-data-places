@@ -13,11 +13,15 @@ describe('date fields', () => {
     expect(render('FuzzyDate', { start_date: '1890-01-01', end_date: '1899-12-31', accuracy: 0, range: true, description: '1890s' })).toBe('1890s');
   });
 
-  it('shows a full date', () => {
-    expect(render('Date', '1983-03-15')).toMatch(/1983/);
+  it('shows a full date as that day in any time zone', () => {
+    expect(render('Date', '1983-03-15')).toBe('March 15, 1983');
+    // Core Data's own form saves a day as local midnight in UTC.
+    expect(render('Date', '1983-03-15T05:00:00.000Z')).toBe('March 15, 1983');
+    expect(render('Date', '1983-03-14T23:00:00.000Z')).toBe('March 15, 1983');
   });
 
-  it('shows a malformed date as written rather than inventing a day', () => {
-    expect(render('Date', '1983-03-')).toBe('1983-03-');
+  it('shows a partial date at its own precision rather than inventing a day', () => {
+    expect(render('Date', '1983-03-')).toBe('March 1983');
+    expect(render('Date', 'sometime')).toBe('sometime');
   });
 });

@@ -4,6 +4,7 @@ import _ from 'underscore';
 import { getAtlasConfig } from '@atlas/server';
 import { buildBaseFilters } from '@search/elasticsearch/filters';
 import { buildSearchSettings, toIndexName, type SearchSettings } from '@search/elasticsearch/settings';
+import { getDateField, toHitDates, toOverlapFilters, yearRuntimeMappings } from '@search/elasticsearch/dates';
 import { SEARCH_PARAM } from '@search/elasticsearch/client';
 
 /**
@@ -101,18 +102,35 @@ const getIndexNames = (requests: Array<any>) => (
  *
  * @param results
  */
-const normalizeResults = (results: any) => ({
+const normalizeResults = (results: any, dateField: string | null = null, locale = 'en') => ({
   ...results,
   results: _.map(results?.results || [], (result: any) => ({
     ...result,
     hits: _.map(result?.hits || [], (hit: any) => ({
       ...hit,
+      // A dated search: core-data's timeline shape (start_date/end_date in
+      // Unix seconds) and the date as a visitor reads it.
+      ...(dateField ? toHitDates(hit[dateField], locale) : {}),
       id: hit.id ?? hit.uuid,
       record_id: hit.record_id ?? hit.objectID,
       _highlightResult: completeArrayHighlights(hit)
     }))
   }))
 });
+
+/**
+ * Searchkit hook for a dated search: the computed year fields on every request
+ * and the year filter as an overlap test (see dates.ts).
+ *
+ * @param dateField
+ */
+const withYears = (dateField: string) => async (requests: Array<any>) => requests.map((request) => ({
+  ...request,
+  body: {
+    ...toOverlapFilters(request.body),
+    runtime_mappings: { ...request.body?.runtime_mappings, ...yearRuntimeMappings(dateField) }
+  }
+}));
 
 const HIGHLIGHT_TAG = /<ais-highlight-0000000000\/?>/g;
 
@@ -272,6 +290,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     debug: import.meta.env.DEV
   });
 
+  const dateField = getDateField(searchConfig);
   let results;
 
   try {
@@ -279,7 +298,8 @@ export const POST: APIRoute = async ({ request, url }) => {
       getBaseFilters: () => buildBaseFilters({
         projectIds: config?.core_data?.project_ids || [],
         modelIds: searchConfig.elasticsearch?.model_ids
-      })
+      }),
+      ...(dateField ? { hooks: { beforeSearch: withYears(dateField) } } : {})
     });
   } catch (error) {
     /**
@@ -295,7 +315,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     });
   }
 
-  return new Response(JSON.stringify(normalizeResults(results)), {
+  return new Response(JSON.stringify(normalizeResults(results, dateField, config?.i18n?.default_locale || 'en')), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store'

@@ -1,19 +1,34 @@
 import { MapSearchContextProvider } from '@apps/search/map/MapSearchContext';
-import { RuntimeConfigProvider } from '@apps/search/SearchConfigContext';
+import { RuntimeConfigProvider, useSearchConfig } from '@apps/search/SearchConfigContext';
 import SearchVisualizations, { ItemViews } from '@apps/session/SearchVisualizations';
 import { fetchSessionItem } from '@backend/api/session';
 import TranslationContext from '@contexts/TranslationContext';
+import { getDateField } from '@search/elasticsearch/dates';
 import { useTranslations } from '@i18n/useTranslations';
 import { Button, ButtonGroup } from '@performant-software/core-data';
 import { Peripleo } from '@peripleo/peripleo';
 import type { SearchSession } from '@types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 
 interface Props {
   id: string;
   lang: string;
   sessionId?: string;
 }
+
+/**
+ * The Timeline tab, shown only for a search whose records have dates: a dated
+ * search (`dates`), or an upstream-style config with an `event_path`.
+ */
+const TimelineButton = (props: ComponentProps<typeof Button>) => {
+  const config = useSearchConfig();
+
+  if (!getDateField(config) && !config?.timeline?.event_path) {
+    return null;
+  }
+
+  return <Button {...props} />;
+};
 
 const SearchItem = (props: Props) => {
   const [item, setItem] = useState<SearchSession | undefined>();
@@ -71,12 +86,12 @@ const SearchItem = (props: Props) => {
               >
                 { t('table') }
               </Button>
-              <Button
+              <TimelineButton
                 onClick={() => setView(ItemViews.timeline)}
                 secondary={view === ItemViews.timeline}
               >
                 { t('timeline') }
-              </Button>
+              </TimelineButton>
             </ButtonGroup>
           </div>
           <SearchVisualizations

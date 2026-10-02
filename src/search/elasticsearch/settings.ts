@@ -1,5 +1,6 @@
 import type { SearchConfig } from '@types';
 import _ from 'underscore';
+import { expandDates, getDateField, isRuntimeField } from '@search/elasticsearch/dates';
 
 /**
  * The `search_settings` object consumed by `@searchkit/api` on the server.
@@ -187,9 +188,12 @@ const normalizeFacet = (facet: any) => {
  *
  * @param searchConfig
  */
-export const buildSearchSettings = (searchConfig: SearchConfig): SearchSettings => {
+export const buildSearchSettings = (config: SearchConfig): SearchSettings => {
+  // A search's `dates` setting adds the year facet and date sorts (dates.ts).
+  const searchConfig = expandDates(config);
   const es = searchConfig?.elasticsearch;
   const cardAttributes = getCardAttributes(searchConfig);
+  const dateField = getDateField(searchConfig);
 
   const settings: SearchSettings = {
     search_attributes: es?.search_attributes?.length
@@ -206,7 +210,12 @@ export const buildSearchSettings = (searchConfig: SearchConfig): SearchSettings 
       ...cardAttributes.map(toResultField),
       // The card's picture: only thumbnail addresses, not whole media summaries.
       ...THUMBNAIL_ATTRIBUTES,
-      ...(es?.facet_attributes || []).map((facet) => toRootField(normalizeFacet(facet).attribute))
+      // The date the timeline places each hit by.
+      ...(dateField ? [dateField] : []),
+      ...(es?.facet_attributes || [])
+        .map(normalizeFacet)
+        .filter((facet) => !isRuntimeField(facet.field))
+        .map((facet) => toRootField(facet.attribute))
     ]),
     /**
      * Searchkit only emits `_highlightResult` (which react-instantsearch's

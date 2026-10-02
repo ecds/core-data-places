@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { FacetTimeline, useCachedHits, Typesense as TypesenseUtils } from '@performant-software/core-data';
+import { FacetTimeline, useCachedHits } from '@performant-software/core-data';
 import { useNavigate } from '@peripleo/peripleo';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRange } from 'react-instantsearch';
@@ -32,7 +32,11 @@ const TimelineView = (props: Props) => {
   }, [from, to]);
 
   /**
-   * Memo-izes the data to be displayed on the timeline as events.
+   * Memo-izes the data to be displayed on the timeline as events: the hits
+   * themselves on a dated search (the search handler gives each one
+   * `start_date`/`end_date`, see search/elasticsearch/dates.ts), or the
+   * records at `event_path` on an upstream-style config. Undated hits are left
+   * off.
    */
   const data = useMemo(() => _.chain(hits)
     .map(
@@ -44,15 +48,19 @@ const TimelineView = (props: Props) => {
       )
     )
     .flatten()
-    .uniq('uuid')
     .compact()
+    .uniq('uuid')
+    .filter((event) => !_.isEmpty(event.start_date) || !_.isEmpty(event.end_date))
     .value(),
   [hits]);
 
   /**
-   * On event click, navigates to the selected event.
+   * On event click, opens the record: the hit's own panel on a dated search,
+   * the event's on an upstream-style config.
    */
-  const onEventClick = useCallback((ev) => navigate(`/events/${ev.id}`), []);
+  const onEventClick = useCallback((ev) => navigate(
+    config.timeline?.event_path ? `/events/${ev.id}` : `${config.route}/${ev.id || ev.uuid}`
+  ), [config.route, config.timeline?.event_path]);
 
   /**
    * Only display if the facet is available to refine.

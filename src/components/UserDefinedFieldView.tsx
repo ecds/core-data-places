@@ -1,8 +1,8 @@
 import LinkedText from '@components/LinkedText';
 import SafeHtml from '@components/SafeHtml';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/16/solid';
+import { formatDateValue } from '@search/elasticsearch/dates';
 import {
-  Date as DateUtils,
   FuzzyDate as FuzzyDateUtils,
   UserDefinedFields as UserDefinedFieldUtils
 } from '@performant-software/shared-components';
@@ -25,14 +25,17 @@ const UserDefinedFieldView = (props: Props) => {
       : <><XMarkIcon className='h-5 w-5 inline' aria-hidden='true' /><span className='sr-only'>No</span></>;
   }
 
-  // Only a full date is formatted; anything else ("1983-03-", stored before
-  // the upload checked dates) shows as written instead of gaining a day.
+  // A day reads "March 15, 1983" whatever the time zone of the server or the
+  // browser (a bare "1983-03-15" parsed as a JavaScript date showed March 14
+  // west of UTC); a partial value stored before the upload checked dates
+  // ("1983-03-") shows at its own precision ("March 1983") instead of gaining
+  // a day, and anything unreadable shows as written.
   if (props.type === DataTypes.date) {
     if (!props.value) {
       return null;
     }
 
-    return /^\d{4}-\d{2}-\d{2}/.test(String(props.value)) ? DateUtils.formatDate(props.value) : String(props.value);
+    return formatDateValue(props.value) || String(props.value);
   }
 
   if (props.type === DataTypes.fuzzyDate) {

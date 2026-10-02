@@ -1,4 +1,5 @@
 import _ from 'underscore';
+import { expandDates } from '@search/elasticsearch/dates';
 
 /**
  * Normalizes the atlas config for peripleo's `<RuntimeConfig>`.
@@ -17,7 +18,7 @@ export const normalizeRuntimeConfig = (config: any) => {
   return {
     ...config,
     layers: config?.layers || [],
-    search: _.map(config?.search || [], (search) => ({ ...search })),
+    search: _.map(config?.search || [], (search) => expandDates({ ...search })),
     core_data: {
       ...config?.core_data,
       // Remove trailing slash if any

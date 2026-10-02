@@ -10,6 +10,8 @@ import { MapProvider, useRuntimeConfig } from '@peripleo/peripleo';
 import clsx from 'clsx';
 import { type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import _ from 'underscore';
+import { getDatedLayers, getInitialMapYear, getLayersForYear, getMapYears } from '@utils/mapYears';
+import MapYearControl from './MapYearControl';
 import PMTilesLayer from './PMTilesLayer';
 
 /**
@@ -80,10 +82,24 @@ interface Props {
 
 const Map = (props: Props) => {
   const config = useRuntimeConfig();
-  const { baseLayers, dataLayers } = PeripleoUtils.filterLayers(config);
+  const { baseLayers, dataLayers } = useMemo(() => PeripleoUtils.filterLayers(config), [config]);
+
+  /**
+   * Dated historic maps: with two or more, a year slider shows them (one year
+   * at a time) instead of the layer menu listing them.
+   */
+  const datedLayers = useMemo(() => getDatedLayers(dataLayers), [dataLayers]);
+  const mapYears = useMemo(() => getMapYears(datedLayers), [datedLayers]);
+  const yearSlider = mapYears.length >= 2;
+  const menuLayers = useMemo(() => (yearSlider ? _.difference(dataLayers, datedLayers) : dataLayers), [dataLayers, datedLayers, yearSlider]);
 
   const [baseLayer, setBaseLayer] = useState(_.first(baseLayers));
   const [overlays, setOverlays] = useState([]);
+  const [mapYear, setMapYear] = useState<number | null>(() => getInitialMapYear(datedLayers));
+
+  const visibleOverlays = useMemo(() => (
+    yearSlider ? [...overlays, ...getLayersForYear(datedLayers, mapYear)] : overlays
+  ), [overlays, yearSlider, datedLayers, mapYear]);
 
   const { t } = useContext(TranslationContext);
 
@@ -124,24 +140,33 @@ const Map = (props: Props) => {
             zoomOut={<Icon name='zoom_out' />}
             zoomOutProps={{ className: buttonClass }}
           />
-          { [...baseLayers, ...dataLayers].length > 1 && (
+          { [...baseLayers, ...menuLayers].length > 1 && (
             <LayerMenu
               baseLayer={baseLayer?.name}
               baseLayers={baseLayers}
               baseLayersLabel={t('baseLayers')}
               className={buttonClass}
-              dataLayers={dataLayers}
+              dataLayers={menuLayers}
               onChangeBaseLayer={setBaseLayer}
               onChangeOverlays={setOverlays}
               overlaysLabel={t('overlays')}
             />
           )}
+          { yearSlider && (
+            <MapYearControl
+              label={t('mapYear')}
+              noneLabel={t('mapYearNone')}
+              onChange={setMapYear}
+              value={mapYear}
+              years={mapYears}
+            />
+          )}
         </div>
         <WhenStyleLoaded>
           <OverlayLayers
-            overlays={_.filter(overlays, (overlay: any) => overlay.layer_type !== 'pmtiles')}
+            overlays={_.filter(visibleOverlays, (overlay: any) => overlay.layer_type !== 'pmtiles')}
           />
-          { _.filter(overlays, (overlay: any) => overlay.layer_type === 'pmtiles').map((overlay: any) => (
+          { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type === 'pmtiles').map((overlay: any) => (
             <PMTilesLayer
               id={overlay.name}
               key={overlay.name}

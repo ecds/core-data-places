@@ -7,6 +7,7 @@ import { useRuntimeConfig } from '@peripleo/peripleo';
 import type { Configuration, DataVisualizationProps } from '@types';
 import React, { useEffect, useId, useMemo, useState } from 'react';
 import _ from 'underscore';
+import { withGeometry } from '@utils/search';
 import { parseVisualizationData } from './parseData';
 
 const Map = (props: DataVisualizationProps) => {
@@ -36,9 +37,11 @@ const Map = (props: DataVisualizationProps) => {
 
     const { hits, features } = parsed.data;
 
-    if (hits && config?.map) {
-      const { geometry, properties } = config.map;
-      setFeatures(TypesenseUtils.getFeatures([], hits, geometry, properties));
+    if (hits) {
+      // As the live map does: v1 hits carry geo.point/geo.shape, adapted to a
+      // GeoJSON geometry (withGeometry); a Typesense-era hit has its own.
+      const { geometry = 'geometry', properties } = config?.map || {};
+      setFeatures(TypesenseUtils.getFeatures([], _.map(hits, (hit) => withGeometry(hit, geometry)), geometry, properties));
       return;
     }
 

@@ -1,5 +1,10 @@
 import { FuzzyDate as FuzzyDateUtils } from '@performant-software/shared-components';
 import _ from 'underscore';
+import { formatDateValue } from '@search/elasticsearch/dates';
+
+const isFuzzyDate = (value: any) => (
+  !!value && typeof value === 'object' && !Array.isArray(value) && ('start_date' in value || 'end_date' in value)
+);
 
 const DEFAULT_JSON_FILENAME = 'search-results.json';
 const MAX_ATTRIBUTES = 4;
@@ -276,7 +281,8 @@ export const getHitValue = (hit, attr) => {
     case 'fuzzyDate':
       return FuzzyDateUtils.getDateView(rawValue);
     default:
-      return rawValue;
+      // A fuzzy date (a v1 Date field's value) reads as "March 1983", not as an object.
+      return isFuzzyDate(rawValue) ? formatDateValue(rawValue) : rawValue;
   }
 };
 
