@@ -52,7 +52,9 @@ const SaveButton = () => {
     };
 
     saveSession('search', data)
-      .then(afterSave);
+      .then(afterSave)
+      // Let the visitor try again rather than leave the dialog stuck.
+      .catch(() => setSaving(false));
   }, [afterSave, hits, name, searchName]);
 
   return (

@@ -105,9 +105,12 @@ export const saveSession = async (key: string, data: any) => {
     id: uuid()
   };
 
+  // Labelled JSON: a POST whose body looks like a form (text/plain, the
+  // default for a string body) is refused by Astro's cross-site check
+  // unless its Origin matches exactly what the server thinks its own is.
   const options = {
     body: JSON.stringify(payload),
-    headers: getRequestHeaders(),
+    headers: { ...getRequestHeaders(), 'Content-Type': 'application/json' },
     method: 'POST'
   };
 
