@@ -62,8 +62,8 @@ Host header (`<slug>.<OG_BASE_DOMAIN>`, `<slug>.localhost`) or `OG_SITE_SLUG`,
 and its config comes from the console's public by-slug endpoint. Any other
 domain name in the Host is looked up as an atlas's own domain (the console's
 by-domain endpoint; in development `<name>.<name>.localhost` names too). When an
-atlas has a connected domain, GET/HEAD requests to its platform address get a
-301 to the same path there (cached for an hour); a preview link or cookie moves
+atlas has a connected domain, GET/HEAD requests to its platform address (and to
+the domain's www pair) get a 301 to the same path there (cached for an hour); a preview link or cookie moves
 along as `?preview=` with a 302 that isn't cached. `OG_BASE_DOMAIN` is required
 in production: without it every `<slug>.<base>` host would be looked up as a
 domain and 404. A proxy in front must pass the original Host header. A host

@@ -1,5 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
-import { classifyHost, domainUrl } from '@atlas/hosts';
+import { classifyHost, domainUrl, hostnameOf } from '@atlas/hosts';
 import { resolveAtlasBundle, resolveAtlasBundleByDomain, runWithAtlas } from '@atlas/server';
 
 type AtlasAddress =
@@ -143,12 +143,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const bundle = await resolveBundle(address, offeredToken ?? cookieToken);
 
-  // An atlas with its own domain: its platform address sends visitors there,
-  // path and query kept. A preview (link or cookie) carries its token along,
-  // so the domain sets its own cookie; that redirect is temporary and never
-  // cached. The public one is permanent but cached for an hour only, so
-  // removing the domain isn't undone by stale browser caches for long.
-  if (address.kind === 'subdomain' && bundle.domain && !bundle.missing && readOnly) {
+  // An atlas with its own domain: its platform address — and the www pair of
+  // its domain (www.example.org for example.org, or the other way round) —
+  // sends visitors there, path and query kept. A preview (link or cookie)
+  // carries its token along, so the domain sets its own cookie; that
+  // redirect is temporary and never cached. The public one is permanent but
+  // cached for an hour only, so removing the domain isn't undone by stale
+  // browser caches for long.
+  const elsewhere = address.kind === 'subdomain'
+    || (address.kind === 'domain' && hostnameOf(request.headers.get('host') ?? url.host) !== bundle.domain);
+
+  if (elsewhere && bundle.domain && !bundle.missing && readOnly) {
     const token = offeredToken ?? (bundle.preview ? cookieToken : null);
     const preview = !!token;
 
