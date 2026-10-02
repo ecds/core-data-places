@@ -59,7 +59,19 @@ npm run playwright
 
 One server renders every atlas: the site is resolved per request from the
 Host header (`<slug>.<OG_BASE_DOMAIN>`, `<slug>.localhost`) or `OG_SITE_SLUG`,
-and its config comes from the console's public by-slug endpoint. Build with
+and its config comes from the console's public by-slug endpoint. Any other
+domain name in the Host is looked up as an atlas's own domain (the console's
+by-domain endpoint; in development `<name>.<name>.localhost` names too). When an
+atlas has a connected domain, GET/HEAD requests to its platform address get a
+301 to the same path there (cached for an hour); a preview link or cookie moves
+along as `?preview=` with a 302 that isn't cached. `OG_BASE_DOMAIN` is required
+in production: without it every `<slug>.<base>` host would be looked up as a
+domain and 404. A proxy in front must pass the original Host header. A host
+that names no atlas (the apex, an IP address) gets the not-found page. The
+`X-Atlas-Slug` override is honoured only with `OG_TRUST_ATLAS_SLUG_HEADER=true`
+(a proxy that sets it and strips the client's): otherwise any client could get
+one atlas's page cached under another's address. The atlas cache is capped at
+`OG_ATLAS_CACHE_MAX_ENTRIES` (default 1,000) addresses. Build with
 
 ```
 npm run build:server        # also writes .br/.gz copies of the built assets

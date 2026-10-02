@@ -1,76 +1,57 @@
 import { defineMiddleware } from 'astro:middleware';
-import { resolveAtlasBundle, runWithAtlas } from '@atlas/server';
+import { classifyHost, domainUrl } from '@atlas/hosts';
+import { resolveAtlasBundle, resolveAtlasBundleByDomain, runWithAtlas } from '@atlas/server';
+
+type AtlasAddress =
+  | { kind: 'header' | 'subdomain' | 'env'; slug: string }
+  | { kind: 'domain'; domain: string };
 
 /**
- * Hosts that are never an atlas subdomain (the apex / infra labels). Kept in
- * sync with the reserved-slug list the console rejects at atlas creation, so a
- * tenant can never claim an infra hostname (console/coredata/...).
- */
-const RESERVED_SUBDOMAINS = new Set([
-  'www', 'api', 'app', 'console', 'coredata', 'staging', 'assets', 'static',
-  'cdn', 'localhost', '127', '0'
-]);
-
-/**
- * Derives an atlas slug from a Host header for the multi-tenant production
- * model (`<slug>.<base-domain>`), plus the local `<slug>.localhost`
- * convenience. Returns null when the host carries no atlas subdomain.
- */
-const subdomainSlug = (host: string): string | null => {
-  const hostname = host.split(':')[0].trim().toLowerCase();
-
-  if (!hostname || hostname === 'localhost') {
-    return null;
-  }
-
-  // `<slug>.localhost` — works in browsers without DNS/hosts changes.
-  if (hostname.endsWith('.localhost')) {
-    const label = hostname.slice(0, -'.localhost'.length);
-    return label && !RESERVED_SUBDOMAINS.has(label) ? label : null;
-  }
-
-  // `<slug>.<OG_BASE_DOMAIN>` — strip the configured apex, the remainder
-  // (single label) is the slug.
-  const baseDomain = process.env.OG_BASE_DOMAIN?.trim().toLowerCase();
-  if (baseDomain && hostname.endsWith(`.${baseDomain}`)) {
-    const label = hostname.slice(0, -(baseDomain.length + 1));
-    return label && !label.includes('.') && !RESERVED_SUBDOMAINS.has(label) ? label : null;
-  }
-
-  return null;
-};
-
-/**
- * Resolves the atlas slug for a request, in priority order:
- *   1. `X-Atlas-Slug` header   — explicit override (trusted proxy / testing).
- *   2. Host subdomain           — production multi-tenant + `<slug>.localhost`.
+ * Resolves which atlas a request is for, in priority order:
+ *   1. `X-Atlas-Slug` header   — explicit override, honoured only when
+ *                                `OG_TRUST_ATLAS_SLUG_HEADER=true` (a proxy
+ *                                that sets it and strips the client's). A
+ *                                header any client can send would let one
+ *                                atlas's page be cached under another's
+ *                                address by a CDN keyed on Host and path.
+ *   2. Host                    — an atlas's platform address
+ *                                (`<slug>.<OG_BASE_DOMAIN>`, `<slug>.localhost`)
+ *                                or its own domain (see @atlas/hosts). The
+ *                                proxy in front must pass the original Host.
  *   3. `OG_SITE_SLUG` env       — single-tenant / local default.
+ *
+ * A request that resolves to none of these gets the not-found page.
  *
  * NB: there is intentionally NO `?atlas=` query param. It only set the top-level
  * page's atlas while the client islands (/config.json, /api/i18n) — fetched
  * without the param — fell back to Host/env, so the page showed one atlas's
  * chrome with another's data. For local multi-atlas testing use
- * `<slug>.localhost:<port>` (handled below) or the `X-Atlas-Slug` header.
+ * `<slug>.localhost:<port>`.
  */
-const resolveSlug = (request: Request, url: URL): string | null => {
-  const header = request.headers.get('x-atlas-slug');
+const resolveAddress = (request: Request, url: URL): AtlasAddress | null => {
+  const header = process.env.OG_TRUST_ATLAS_SLUG_HEADER === 'true' ? request.headers.get('x-atlas-slug') : null;
   if (header) {
-    return header.trim().toLowerCase();
+    return { kind: 'header', slug: header.trim().toLowerCase() };
   }
 
-  const host = request.headers.get('host') ?? url.host;
-  const sub = subdomainSlug(host ?? '');
-  if (sub) {
-    return sub;
+  const host = classifyHost(request.headers.get('host') ?? url.host ?? '', process.env.OG_BASE_DOMAIN);
+  if (host) {
+    return host.kind === 'domain' ? host : { kind: 'subdomain', slug: host.slug };
   }
 
   const env = process.env.OG_SITE_SLUG;
   if (env) {
-    return env.trim().toLowerCase();
+    return { kind: 'env', slug: env.trim().toLowerCase() };
   }
 
   return null;
 };
+
+const resolveBundle = (address: AtlasAddress, previewToken: string | null) => (
+  address.kind === 'domain'
+    ? resolveAtlasBundleByDomain(address.domain, previewToken)
+    : resolveAtlasBundle(address.slug, previewToken)
+);
 
 // --- Drafts and preview links ----------------------------------------------
 //
@@ -149,10 +130,40 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const { request, url } = context;
+  const readOnly = request.method === 'GET' || request.method === 'HEAD';
+
+  const offered = url.searchParams.get(PREVIEW_PARAM);
+  const offeredToken = offered && TOKEN_FORMAT.test(offered) && readOnly ? offered : null;
+  const cookieToken = readPreviewToken(request);
+
+  const address = resolveAddress(request, url);
+  if (!address) {
+    return notFound(url, false);
+  }
+
+  const bundle = await resolveBundle(address, offeredToken ?? cookieToken);
+
+  // An atlas with its own domain: its platform address sends visitors there,
+  // path and query kept. A preview (link or cookie) carries its token along,
+  // so the domain sets its own cookie; that redirect is temporary and never
+  // cached. The public one is permanent but cached for an hour only, so
+  // removing the domain isn't undone by stale browser caches for long.
+  if (address.kind === 'subdomain' && bundle.domain && !bundle.missing && readOnly) {
+    const token = offeredToken ?? (bundle.preview ? cookieToken : null);
+    const preview = !!token;
+
+    return new Response(null, {
+      status: preview ? 302 : 301,
+      headers: {
+        Location: domainUrl(bundle.domain, request, url, token),
+        'Cache-Control': preview ? NO_STORE : 'public, max-age=3600',
+        ...(preview ? { 'Referrer-Policy': 'no-referrer' } : {})
+      }
+    });
+  }
 
   // A preview link: keep the token in a cookie and drop it from the address.
-  const offered = url.searchParams.get(PREVIEW_PARAM);
-  if (offered && TOKEN_FORMAT.test(offered) && (request.method === 'GET' || request.method === 'HEAD')) {
+  if (offeredToken) {
     const clean = new URL(url);
     clean.searchParams.delete(PREVIEW_PARAM);
     const secure = url.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
@@ -161,19 +172,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
       status: 303,
       headers: {
         Location: `${clean.pathname}${clean.search}${clean.hash}`,
-        'Set-Cookie': previewCookie(offered, secure),
+        'Set-Cookie': previewCookie(offeredToken, secure),
         'Cache-Control': NO_STORE,
         'Referrer-Policy': 'no-referrer'
       }
     });
   }
 
-  const slug = resolveSlug(request, url);
-  const previewToken = readPreviewToken(request);
-  const bundle = await resolveAtlasBundle(slug, previewToken);
-
   if (bundle.missing) {
-    return notFound(url, !!previewToken);
+    return notFound(url, !!cookieToken);
   }
 
   context.locals.atlas = bundle;

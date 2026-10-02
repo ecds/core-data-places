@@ -2,7 +2,8 @@ import type { AtlasImages } from '@utils/images';
 
 /**
  * The per-request atlas bundle: everything the shared dynamic renderer needs
- * to render one atlas, resolved by slug from the console at request time.
+ * to render one atlas, resolved by slug or by its own domain from the console
+ * at request time.
  *
  * `config` is the config.json document (the same shape the old baked
  * public/config.json had); `branding` and `navigation` are the console-owned
@@ -24,6 +25,11 @@ export interface AtlasBundle {
    * token): the renderer answers 404 rather than an empty atlas.
    */
   missing?: boolean;
+  /**
+   * The atlas's own domain, once connected (its DNS points at the atlas):
+   * the platform address <slug>.<base domain> sends visitors there.
+   */
+  domain?: string | null;
   config: any;
   branding: any;
   navigation: any;
