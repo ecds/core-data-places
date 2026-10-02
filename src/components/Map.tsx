@@ -76,7 +76,10 @@ const WhenStyleLoaded = ({ children }: { children: ReactNode }) => {
  * Keeps overlays (historic maps, imagery, PMTiles) beneath the atlas's own
  * data: peripleo adds a layer at the top of the style, so an overlay switched
  * on after the map loaded — from the layer menu or the year slider — covered
- * the place markers. Data layers are the ones drawn from GeoJSON sources that
+ * the place markers. An overlay's layers are known exactly: a georeferenced
+ * map's layer carries the overlay's name as its id, a PMTiles archive's layers
+ * read the source named after it, and peripleo's raster and GeoJSON layers read
+ * `source-<name>`. Data layers are the ones drawn from GeoJSON sources that
  * aren't overlays (results, the selected place). Runs again whenever the style
  * changes, since an overlay's layer can arrive after its component mounts.
  */
@@ -87,9 +90,10 @@ const KeepOverlaysBelowData = ({ names }: { names: string[] }) => {
   useEffect(() => {
     if (!map) return;
 
-    const isOverlay = (id: string) => _.some(names, (name) => (
-      id === name || id === `layer-${name}` || id.startsWith(`layer-${name}-`) || id.startsWith(`${name}-`)
-    ));
+    const isOverlay = (id: string) => {
+      const source = map.getLayer(id)?.source;
+      return _.some(names, (name) => id === name || source === name || source === `source-${name}`);
+    };
 
     const reorder = () => {
       const order: string[] = map.getLayersOrder?.() || _.pluck(map.getStyle()?.layers || [], 'id');
@@ -207,9 +211,16 @@ const Map = (props: Props) => {
           )}
         </div>
         <WhenStyleLoaded>
-          <OverlayLayers
-            overlays={_.filter(visibleOverlays, (overlay: any) => overlay.layer_type !== 'pmtiles')}
-          />
+          { /* One per overlay, keyed by name: core-data's OverlayLayers keys by
+              position, and its georeferenced-map layer is added only on mount,
+              so a different map in the same position (the year slider) must
+              remount rather than update. */ }
+          { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type !== 'pmtiles').map((overlay: any) => (
+            <OverlayLayers
+              key={overlay.name}
+              overlays={[overlay]}
+            />
+          ))}
           { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type === 'pmtiles').map((overlay: any) => (
             <PMTilesLayer
               id={overlay.name}
