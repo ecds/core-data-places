@@ -26,6 +26,7 @@ const displayFields = getDisplayFields(event, fields);
             <li>
               <p class='text-neutral-700 uppercase font-semibold text-xs border-b border-black'>{displayField.label}</p>
               <UserDefinedFieldView
+                locale={Astro.currentLocale}
                 type={displayField.value.type}
                 value={displayField.value.value}
               />

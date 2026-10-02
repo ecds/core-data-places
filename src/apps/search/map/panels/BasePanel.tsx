@@ -61,7 +61,7 @@ const BasePanel = (props: Props) => {
 
   const navigate = useNavigate();
   const config = useSearchConfig();
-  const { t } = useContext(TranslationContext);
+  const { lang, t } = useContext(TranslationContext);
   const { setSelected } = useSelection();
 
   const route = useCurrentRoute();
@@ -413,10 +413,11 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
    */
   const renderUserDefined = useCallback((type: string, value: any) => (
     <UserDefinedFieldView
+      locale={lang}
       type={type}
       value={value}
     />
-  ), []);
+  ), [lang]);
 
   /**
    * Memo-izes user defined field values.

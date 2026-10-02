@@ -38,6 +38,32 @@ describe('reading date values', () => {
   test('a timestamp is the nearest day, in any time zone it was saved from', () => {
     expect(toDateRange('1983-01-01T05:00:00.000Z')?.start).toEqual({ year: 1983, month: 1, day: 1 });
     expect(toDateRange('1982-12-31T23:00:00.000Z')?.start).toEqual({ year: 1983, month: 1, day: 1 });
+    // the UTC instant, as the script reads it; no offset reads as UTC
+    expect(toYears('1983-01-01T00:00:00+14:00')).toEqual([1982, 1982]);
+    expect(toYears('1983-01-01T05:00:00')).toEqual([1983, 1983]);
+    // unreadable: the leading date
+    expect(toYears('1983-03-15Tnoon')).toEqual([1983, 1983]);
+  });
+
+  test('only real months and days; out-of-range years are no date', () => {
+    expect(toDateRange('1983-99-99')).toMatchObject({ start: { year: 1983 }, accuracy: 'year' });
+    expect(formatDateValue('1983-02-29')).toBe('February 1983');
+    expect(formatDateValue('1984-02-29')).toBe('February 29, 1984');
+    expect(toYears({ value: 9999999999 })).toBeNull();
+    expect(toYears({ value: '1000001' })).toBeNull();
+  });
+
+  test('a list of dates spans its earliest to its latest, as the script does', () => {
+    expect(toYears({ value: ['1990', '1850'] })).toEqual([1850, 1990]);
+    expect(formatDateValue({ value: ['1990', '1850'] })).toBe('1850–1990');
+    expect(toYears({ value: [fuzzy('1861-01-01', '1865-12-31', 0, true).value, '1850'] })).toEqual([1850, 1865]);
+  });
+
+  test('years before the common era read with their era', () => {
+    expect(formatDateValue('-0043-03-15')).toBe('March 15, 44 BC');
+    expect(formatDateValue({ value: -43 })).toBe('44 BC');
+    expect(formatDateValue({ value: 0 })).toBe('1 BC');
+    expect(formatDateValue('0044-03-15')).toBe('March 15, 44');
   });
 
   test('labels read at the date\'s own precision', () => {
@@ -56,7 +82,6 @@ describe('reading date values', () => {
     const dates = toHitDates(fuzzy('1983-03-01', '1983-03-31', 1));
     expect(new Date(dates.start_date![0] * 1000).toISOString()).toBe('1983-03-01T00:00:00.000Z');
     expect(new Date(dates.end_date![0] * 1000).toISOString()).toBe('1983-03-31T00:00:00.000Z');
-    expect(dates.date_label).toBe('March 1983');
 
     const year = toHitDates({ value: 1890 });
     expect(new Date(year.end_date![0] * 1000).toISOString()).toBe('1890-12-31T00:00:00.000Z');
@@ -213,14 +238,60 @@ describe.skipIf(!reachable)('a dated search, through the handler', () => {
     expect(ids(newest.result)[0]).toBe('month');
   });
 
-  test('hits carry the timeline\'s dates and a readable date', async () => {
+  test('hits carry the timeline\'s dates', async () => {
     const { result } = await search({ query: 'March' });
     const hit = result.hits.find((h: any) => h.uuid === 'month');
-    expect(hit.date_label).toBe('March 1983');
-    expect(hit.start_date).toHaveLength(1);
+    expect(new Date(hit.start_date[0] * 1000).toISOString()).toBe('1983-03-01T00:00:00.000Z');
+    expect(hit.date_label).toBeUndefined();
 
     const undated = (await search({ query: 'Circa' })).result.hits[0];
     expect(undated.start_date).toBeUndefined();
+  });
+
+  test('no stored value can break the search: bad timestamps, offsets, overflow, BCE, lists', async () => {
+    const odd = [
+      place('nozone', 'No zone', { label: 'Date listed', value: '1983-03-15T05:00:00' }),
+      place('garbled', 'Garbled', { label: 'Date listed', value: '1983-03-15Tnoon' }),
+      place('offset', 'Offset', { label: 'Date listed', value: '1983-01-01T00:00:00+14:00' }),
+      place('overflow', 'Overflow', { label: 'Date listed', value: [0, 2147483647] }),
+      place('huge', 'Huge', { label: 'Date listed', value: 9999999999 }),
+      place('bce', 'Ides', { label: 'Date listed', value: '-0043-03-15' }),
+      place('list', 'Listed twice', { label: 'Date listed', value: ['1990', '1850'] })
+    ];
+
+    for (const { id, ...source } of odd) {
+      await es('PUT', `/${INDEX}/_doc/${id}?refresh=true`, source);
+    }
+
+    try {
+      const stats = await search({ facets: ['years'] });
+      expect(stats.status).toBe(200);
+      expect(stats.result.facets_stats.years).toMatchObject({ min: -43, max: 1990 });
+
+      const filtered = await search({ numericFilters: ['years>=1982', 'years<=1983'] });
+      expect(filtered.status).toBe(200);
+      // 'list' spans 1850–1990, so it covers these years too
+      expect(ids(filtered.result).sort()).toEqual(['garbled', 'list', 'month', 'nozone', 'offset']);
+
+      const span = await search({ numericFilters: ['years>=1900', 'years<=1910'] });
+      expect(ids(span.result)).toContain('list');
+
+      const sorted = await search({}, `${INDEX}_sort_date_asc`);
+      expect(sorted.status).toBe(200);
+      expect(ids(sorted.result)[0]).toBe('bce');
+    } finally {
+      for (const { id } of odd) {
+        await es('DELETE', `/${INDEX}/_doc/${id}?refresh=true`);
+      }
+    }
+  });
+
+  test('a curator facet named "years" keeps its name; the date filter becomes og_years', async () => {
+    const expanded = expandDates({ ...atlas.config.search[0], elasticsearch: { ...atlas.config.search[0].elasticsearch, facet_attributes: ['years', 'types'] } });
+    expect(expanded.elasticsearch.facet_attributes[0]).toEqual({ attribute: 'og_years', field: 'og_years', type: 'numeric' });
+    expect(expanded.facets[0]).toMatchObject({ name: 'og_years', type: 'range' });
+    expect(expanded.timeline.date_range_facet).toBe('og_years');
+    expect(expandDates(expanded)).toEqual(expanded);
   });
 
   test('the year attribute is declared only on a dated search', async () => {

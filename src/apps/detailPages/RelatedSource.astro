@@ -30,6 +30,7 @@ const displayFields = getDisplayFields(record, fields);
         <li class='block'>
           <span class='text-neutral-400 uppercase font-semibold text-xs'>{displayField.label}</span>
           <UserDefinedFieldView
+            locale={Astro.currentLocale}
             type={displayField.value.type}
             value={displayField.value.value}
           />

@@ -12,6 +12,8 @@ import './UserDefinedFieldView.css';
 const { DataTypes } = UserDefinedFieldUtils;
 
 interface Props {
+  /** The page's language, for month names (default English). */
+  locale?: string;
   type: string;
   value?: any;
 }
@@ -35,7 +37,7 @@ const UserDefinedFieldView = (props: Props) => {
       return null;
     }
 
-    return formatDateValue(props.value) || String(props.value);
+    return formatDateValue(props.value, props.locale) || String(props.value);
   }
 
   if (props.type === DataTypes.fuzzyDate) {

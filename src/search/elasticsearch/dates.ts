@@ -33,37 +33,53 @@ const RUNTIME_FIELDS = [YEARS_FIELD, YEAR_START_FIELD, YEAR_END_FIELD];
 /** A top-level document key, as the indexer writes a field's parameterized name. */
 const FIELD_PATTERN = /^[a-z0-9_]+$/;
 
+/** Years outside ±MAX_YEAR are treated as no year (a typo or a stray number, not a date). */
+export const MAX_YEAR = 100000;
+
 /**
  * Painless. `year` reads the year off whatever a date value is: a number is a
  * year; an ISO timestamp (Core Data's own form saves a day as local midnight in
- * UTC) is rounded to the nearest day first, so 1983-01-01T05:00Z and
- * 1982-12-31T23:00Z are both 1983; otherwise the leading digits ("1983-03-15",
- * "1983-03-", "1890"). Text that doesn't start with a year ("c. 1890") has
- * none — the upload turns those into fuzzy dates.
+ * UTC) is taken as a UTC instant — one without an offset as UTC — and rounded
+ * to the nearest day, so 1983-01-01T05:00Z and 1982-12-31T23:00Z are both 1983;
+ * a timestamp that doesn't parse, and any other text, gives its leading digits
+ * ("1983-03-15", "1983-03-", "1890"). Text that doesn't start with a year
+ * ("c. 1890") has none — the upload turns those into fuzzy dates. No value can
+ * make the script fail: one bad record must not break an atlas's searches.
+ * `toPart` below applies the same rules.
  *
  * Elasticsearch caps a runtime field at 100 values per document, so a span over
  * 99 years is sampled for `og_years` (first and last year always included);
  * the filter itself uses the exact first/last years.
  */
 const YEARS_SCRIPT = `
-int year(def x) {
-  if (x == null) { return Integer.MIN_VALUE; }
-  if (x instanceof Number) { return ((Number) x).intValue(); }
+long year(def x) {
+  if (x == null) { return Long.MIN_VALUE; }
+  if (x instanceof Number) {
+    double d = ((Number) x).doubleValue();
+    if (!(d >= -${MAX_YEAR}.0 && d <= ${MAX_YEAR}.0)) { return Long.MIN_VALUE; }
+    return (long) d;
+  }
   String s = x.toString().trim();
   if (s.length() > 10 && s.charAt(10) == (char) 'T') {
-    return ZonedDateTime.parse(s).plusHours(12).getYear();
+    try {
+      return ZonedDateTime.parse(s).withZoneSameInstant(ZoneOffset.UTC).plusHours(12).getYear();
+    } catch (Exception e) {
+      try {
+        return LocalDateTime.parse(s).plusHours(12).getYear();
+      } catch (Exception e2) {}
+    }
   }
   int i = 0;
   boolean negative = false;
   if (s.length() > 0 && s.charAt(0) == (char) '-') { negative = true; i = 1; }
-  int y = 0;
+  long y = 0;
   int digits = 0;
   while (i < s.length() && digits < 6 && Character.isDigit(s.charAt(i))) {
     y = y * 10 + (s.charAt(i) - (char) '0');
     i++;
     digits++;
   }
-  if (digits == 0) { return Integer.MIN_VALUE; }
+  if (digits == 0 || y > ${MAX_YEAR} || (i < s.length() && Character.isDigit(s.charAt(i)))) { return Long.MIN_VALUE; }
   return negative ? -y : y;
 }
 
@@ -72,30 +88,30 @@ if (field == null) { return; }
 def value = (field instanceof Map && field.containsKey('value')) ? field.get('value') : field;
 if (value == null) { return; }
 List values = value instanceof List ? (List) value : [value];
-int lo = Integer.MAX_VALUE;
-int hi = Integer.MIN_VALUE;
+long lo = Long.MAX_VALUE;
+long hi = Long.MIN_VALUE;
 for (def item : values) {
-  int s;
-  int e;
+  long s;
+  long e;
   if (item instanceof Map) {
     s = year(item.get('start_date'));
     e = year(item.get('end_date'));
-    if (s == Integer.MIN_VALUE) { s = e; }
-    if (e == Integer.MIN_VALUE) { e = s; }
+    if (s == Long.MIN_VALUE) { s = e; }
+    if (e == Long.MIN_VALUE) { e = s; }
   } else {
     s = year(item);
     e = s;
   }
-  if (s == Integer.MIN_VALUE) { continue; }
+  if (s == Long.MIN_VALUE) { continue; }
   if (e < s) { e = s; }
   if (s < lo) { lo = s; }
   if (e > hi) { hi = e; }
 }
-if (lo == Integer.MAX_VALUE) { return; }
+if (lo == Long.MAX_VALUE) { return; }
 if (params.part == 'start') { emit(lo); return; }
 if (params.part == 'end') { emit(hi); return; }
-int step = hi - lo < 99 ? 1 : (hi - lo + 98) / 98;
-for (int y = lo; y < hi; y += step) { emit(y); }
+long step = hi - lo < 99 ? 1 : (hi - lo + 98) / 98;
+for (long y = lo; y < hi; y += step) { emit(y); }
 emit(hi);
 `;
 
@@ -128,7 +144,14 @@ export const expandDates = (search: any) => {
   const facets = search.facets || [];
   const sorts = elasticsearch.sort_attributes || [];
 
-  const hasAttribute = _.some(facetAttributes, (facet: any) => (typeof facet === 'string' ? facet : facet?.attribute) === YEARS_ATTRIBUTE);
+  const attributeOf = (facet: any) => (typeof facet === 'string' ? facet : facet?.attribute);
+  const fieldOf = (facet: any) => (typeof facet === 'string' ? facet : facet?.field || facet?.attribute);
+
+  // The filter is `years` (the URL reads ?years=1800:1830) unless the atlas has
+  // a facet of its own by that name (a "Years" category), then `og_years`.
+  const taken = _.some(facetAttributes, (facet: any) => attributeOf(facet) === YEARS_ATTRIBUTE && fieldOf(facet) !== YEARS_FIELD);
+  const attribute = taken ? YEARS_FIELD : YEARS_ATTRIBUTE;
+  const hasAttribute = _.some(facetAttributes, (facet: any) => attributeOf(facet) === attribute);
 
   return {
     ...search,
@@ -136,7 +159,7 @@ export const expandDates = (search: any) => {
       ...elasticsearch,
       facet_attributes: hasAttribute
         ? facetAttributes
-        : [{ attribute: YEARS_ATTRIBUTE, field: YEARS_FIELD, type: 'numeric' }, ...facetAttributes],
+        : [{ attribute, field: YEARS_FIELD, type: 'numeric' }, ...facetAttributes],
       sort_attributes: [
         ...sorts,
         ...[
@@ -145,11 +168,11 @@ export const expandDates = (search: any) => {
         ].filter((sort) => !_.findWhere(sorts, { name: sort.name }))
       ]
     },
-    facets: _.findWhere(facets, { name: YEARS_ATTRIBUTE })
+    facets: _.findWhere(facets, { name: attribute })
       ? facets
-      : [{ name: YEARS_ATTRIBUTE, type: 'range', label: search.dates.label }, ...facets],
+      : [{ name: attribute, type: 'range', label: search.dates.label }, ...facets],
     timeline: search.dates.timeline
-      ? { ...search.timeline, date_range_facet: YEARS_ATTRIBUTE }
+      ? { ...search.timeline, date_range_facet: attribute }
       : search.timeline
   };
 };
@@ -234,15 +257,32 @@ export interface DateRange {
 
 const ACCURACY = ['year', 'month', 'day'] as const;
 
+const inRange = (year: number) => Math.abs(year) <= MAX_YEAR;
+
 /**
- * Reads one date-ish value into its parts. ISO timestamps are rounded to the
- * nearest UTC day (see the script).
+ * The number of days in a month of the proleptic Gregorian calendar.
+ *
+ * @param year
+ * @param month 1–12
+ */
+const daysInMonth = (year: number, month: number) => {
+  const date = new Date(Date.UTC(2000, 0, 1));
+  date.setUTCFullYear(year, month, 0);
+  return date.getUTCDate();
+};
+
+/**
+ * Reads one date-ish value into its parts, by the script's rules: a number is a
+ * year; a timestamp is the UTC instant (one without an offset read as UTC)
+ * rounded to the nearest day; otherwise the leading year, and the month and day
+ * when they're real ones ("1983-99-99" is just 1983). Years beyond ±MAX_YEAR
+ * are no date.
  *
  * @param value
  */
 const toPart = (value: any): { part: DatePart, accuracy: DateRange['accuracy'] } | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return { part: { year: Math.trunc(value) }, accuracy: 'year' };
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && inRange(value) ? { part: { year: Math.trunc(value) }, accuracy: 'year' } : null;
   }
 
   if (typeof value !== 'string') {
@@ -251,36 +291,44 @@ const toPart = (value: any): { part: DatePart, accuracy: DateRange['accuracy'] }
 
   const text = value.trim();
 
-  if (/^-?\d{1,6}-\d{2}-\d{2}T/.test(text)) {
-    const date = new Date(Date.parse(text) + 12 * 3600 * 1000);
+  if (/^\d{4}-\d{2}-\d{2}T/.test(text)) {
+    const time = Date.parse(/(z|[+-]\d{2}:?\d{2})$/i.test(text) ? text : `${text}Z`);
 
-    if (!Number.isNaN(date.getTime())) {
+    if (!Number.isNaN(time)) {
+      const date = new Date(time + 12 * 3600 * 1000);
       return { part: { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() }, accuracy: 'day' };
     }
   }
 
-  const match = text.match(/^(-?\d{1,6})(?:-(\d{1,2})(?:-(\d{1,2}))?)?/);
+  const match = text.match(/^(-?\d{1,6})(?!\d)(?:-(\d{1,2})(?:-(\d{1,2}))?)?/);
 
-  if (!match) {
+  if (!match || !inRange(Number(match[1]))) {
     return null;
   }
 
-  const [, year, month, day] = match;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
 
-  if (day) {
-    return { part: { year: Number(year), month: Number(month), day: Number(day) }, accuracy: 'day' };
+  if (!(month >= 1 && month <= 12)) {
+    return { part: { year }, accuracy: 'year' };
   }
 
-  if (month) {
-    return { part: { year: Number(year), month: Number(month) }, accuracy: 'month' };
+  if (!(day >= 1 && day <= daysInMonth(year, month))) {
+    return { part: { year, month }, accuracy: 'month' };
   }
 
-  return { part: { year: Number(year) }, accuracy: 'year' };
+  return { part: { year, month, day }, accuracy: 'day' };
 };
+
+const startKey = (part: DatePart) => (part.year * 100 + (part.month || 1)) * 100 + (part.day || 1);
+const endKey = (part: DatePart) => (part.year * 100 + (part.month || 12)) * 100 + (part.day || 31);
 
 /**
  * Any stored date value — `{ label, value }`, a fuzzy date, an ISO day or
- * timestamp, a year, partial text — as a start/end range, or null.
+ * timestamp, a year, partial text, or a list of them — as a start/end range,
+ * or null. A list spans its earliest start to its latest end, as the script
+ * does.
  *
  * @param raw
  */
@@ -292,7 +340,18 @@ export const toDateRange = (raw: any): DateRange | null => {
   }
 
   if (Array.isArray(value)) {
-    value = _.find(value, (item) => !!toDateRange(item));
+    const ranges = _.compact(_.map(value, toDateRange)) as DateRange[];
+
+    if (ranges.length < 2) {
+      return ranges[0] || null;
+    }
+
+    return {
+      start: _.min(ranges, (range: DateRange) => startKey(range.start)).start,
+      end: _.max(ranges, (range: DateRange) => endKey(range.end)).end,
+      accuracy: ACCURACY[Math.min(...ranges.map((range) => ACCURACY.indexOf(range.accuracy)))],
+      range: true
+    };
   }
 
   if (value && typeof value === 'object') {
@@ -319,20 +378,33 @@ export const toDateRange = (raw: any): DateRange | null => {
   return single ? { start: single.part, end: single.part, accuracy: single.accuracy, range: false } : null;
 };
 
+/**
+ * One date at its precision. Year 0 and earlier read with their era, as the
+ * locale writes it ("44 BC" for the ISO year -0043).
+ *
+ * @param part
+ * @param accuracy
+ * @param locale
+ */
 const formatPart = (part: DatePart, accuracy: DateRange['accuracy'], locale: string) => {
-  if (accuracy === 'year' || !part.month) {
+  const beforeCommonEra = part.year <= 0;
+  const month = accuracy !== 'year' && part.month;
+  const day = accuracy === 'day' && month && part.day;
+
+  if (!month && !beforeCommonEra) {
     return String(part.year);
   }
 
-  // Year 1–99 need setUTCFullYear; Date.UTC maps them to 1900–1999.
-  const date = new Date(Date.UTC(2000, part.month - 1, part.day || 1));
-  date.setUTCFullYear(part.year);
+  // Years 0–99 need setUTCFullYear; Date.UTC maps them to 1900–1999.
+  const date = new Date(Date.UTC(2000, 0, 1));
+  date.setUTCFullYear(part.year, (part.month || 1) - 1, part.day || 1);
 
   return new Intl.DateTimeFormat(locale, {
     timeZone: 'UTC',
     year: 'numeric',
-    month: 'long',
-    ...(accuracy === 'day' && part.day ? { day: 'numeric' } : {})
+    ...(month ? { month: 'long' } : {}),
+    ...(day ? { day: 'numeric' } : {}),
+    ...(beforeCommonEra ? { era: 'short' } : {})
   }).format(date);
 };
 
@@ -380,13 +452,12 @@ const toUnixSeconds = (part: DatePart, last = false) => {
 };
 
 /**
- * What a hit carries for the timeline (core-data's `start_date`/`end_date`
- * convention: arrays of Unix seconds) and its readable date.
+ * What a hit carries for the timeline: core-data's `start_date`/`end_date`
+ * convention, arrays of Unix seconds.
  *
  * @param raw
- * @param locale
  */
-export const toHitDates = (raw: any, locale = 'en') => {
+export const toHitDates = (raw: any) => {
   const range = toDateRange(raw);
 
   if (!range) {
@@ -395,7 +466,6 @@ export const toHitDates = (raw: any, locale = 'en') => {
 
   return {
     start_date: [toUnixSeconds(range.start)],
-    end_date: [toUnixSeconds(range.end, true)],
-    date_label: formatDateValue(raw, locale)
+    end_date: [toUnixSeconds(range.end, true)]
   };
 };

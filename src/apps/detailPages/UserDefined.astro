@@ -21,6 +21,7 @@ const { DataTypes } = UserDefinedFieldUtils;
         <p class="capitalize font-semibold font-body">{t(uuid)}</p>
         <div class="text-neutral-800 break-words font-body">
           <UserDefinedFieldView
+            locale={Astro.currentLocale}
             type={record.user_defined[uuid].type}
             value={record.user_defined[uuid].value}
           />

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import UserDefinedFieldView from '../src/components/UserDefinedFieldView';
 
-const render = (type: string, value: any) => renderToStaticMarkup(createElement(UserDefinedFieldView, { type, value }));
+const render = (type: string, value: any, locale?: string) => renderToStaticMarkup(createElement(UserDefinedFieldView, { type, value, locale }));
 
 describe('date fields', () => {
   it('shows a fuzzy date at its own precision', () => {
@@ -23,5 +23,10 @@ describe('date fields', () => {
   it('shows a partial date at its own precision rather than inventing a day', () => {
     expect(render('Date', '1983-03-')).toBe('March 1983');
     expect(render('Date', 'sometime')).toBe('sometime');
+  });
+
+  it('reads in the page\'s language', () => {
+    expect(render('Date', '1983-03-15', 'es')).toBe('15 de marzo de 1983');
+    expect(render('Date', '1983-03-', 'fr')).toBe('mars 1983');
   });
 });
