@@ -72,6 +72,50 @@ const WhenStyleLoaded = ({ children }: { children: ReactNode }) => {
   return ready ? <>{children}</> : null;
 };
 
+/**
+ * Keeps overlays (historic maps, imagery, PMTiles) beneath the atlas's own
+ * data: peripleo adds a layer at the top of the style, so an overlay switched
+ * on after the map loaded — from the layer menu or the year slider — covered
+ * the place markers. Data layers are the ones drawn from GeoJSON sources that
+ * aren't overlays (results, the selected place). Runs again whenever the style
+ * changes, since an overlay's layer can arrive after its component mounts.
+ */
+const KeepOverlaysBelowData = ({ names }: { names: string[] }) => {
+  const map = useMap() as any;
+  const key = names.join('\u0000');
+
+  useEffect(() => {
+    if (!map) return;
+
+    const isOverlay = (id: string) => _.some(names, (name) => (
+      id === name || id === `layer-${name}` || id.startsWith(`layer-${name}-`) || id.startsWith(`${name}-`)
+    ));
+
+    const reorder = () => {
+      const order: string[] = map.getLayersOrder?.() || _.pluck(map.getStyle()?.layers || [], 'id');
+      const isData = (id: string) => !isOverlay(id) && map.getSource(map.getLayer(id)?.source)?.type === 'geojson';
+      const firstData = _.findIndex(order, isData);
+
+      if (firstData < 0) return;
+
+      order.forEach((id, index) => {
+        if (index > firstData && isOverlay(id)) {
+          map.moveLayer(id, order[firstData]);
+        }
+      });
+    };
+
+    reorder();
+    map.on('styledata', reorder);
+
+    return () => {
+      map.off('styledata', reorder);
+    };
+  }, [map, key]);
+
+  return null;
+};
+
 interface Props {
   children: ReactNode,
   classNames?: {
@@ -176,6 +220,9 @@ const Map = (props: Props) => {
             />
           ))}
           { props.children }
+          <KeepOverlaysBelowData
+            names={_.pluck(visibleOverlays, 'name')}
+          />
         </WhenStyleLoaded>
       </PeripleoMap>
     </MapProvider>
