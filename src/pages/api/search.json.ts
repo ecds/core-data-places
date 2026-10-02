@@ -102,15 +102,15 @@ const getIndexNames = (requests: Array<any>) => (
  *
  * @param results
  */
-const normalizeResults = (results: any, dateField: string | null = null, locale = 'en') => ({
+const normalizeResults = (results: any, dateField: string | null = null) => ({
   ...results,
   results: _.map(results?.results || [], (result: any) => ({
     ...result,
     hits: _.map(result?.hits || [], (hit: any) => ({
       ...hit,
       // A dated search: core-data's timeline shape (start_date/end_date in
-      // Unix seconds) and the date as a visitor reads it.
-      ...(dateField ? toHitDates(hit[dateField], locale) : {}),
+      // Unix seconds).
+      ...(dateField ? toHitDates(hit[dateField]) : {}),
       id: hit.id ?? hit.uuid,
       record_id: hit.record_id ?? hit.objectID,
       _highlightResult: completeArrayHighlights(hit)
@@ -119,18 +119,44 @@ const normalizeResults = (results: any, dateField: string | null = null, locale 
 });
 
 /**
- * Searchkit hook for a dated search: the computed year fields on every request
- * and the year filter as an overlap test (see dates.ts).
+ * Limits on what one POST can ask of the cluster. InstantSearch sends one
+ * request per search plus one per refined disjunctive facet, and pages of 20
+ * (map) or 50 (list): these leave room for that and no more.
+ */
+const MAX_REQUESTS = 20;
+const MAX_HITS_PER_PAGE = 250;
+const SEARCH_TIMEOUT = '10s';
+
+/**
+ * Searchkit hook: every request gets a time limit, and on a dated search the
+ * computed year fields and the year filter as an overlap test (see dates.ts).
  *
  * @param dateField
  */
-const withYears = (dateField: string) => async (requests: Array<any>) => requests.map((request) => ({
+const beforeSearch = (dateField: string | null) => async (requests: Array<any>) => requests.map((request) => ({
   ...request,
-  body: {
-    ...toOverlapFilters(request.body),
-    runtime_mappings: { ...request.body?.runtime_mappings, ...yearRuntimeMappings(dateField) }
-  }
+  body: dateField
+    ? {
+      ...toOverlapFilters(request.body),
+      runtime_mappings: { ...request.body?.runtime_mappings, ...yearRuntimeMappings(dateField) },
+      timeout: SEARCH_TIMEOUT
+    }
+    : { ...request.body, timeout: SEARCH_TIMEOUT }
 }));
+
+/**
+ * The exact index names a search answers to: its index, and its index with one
+ * of its declared sort suffixes (`<index>_sort_<name>`). Searchkit strips a
+ * suffix only when the name ends with a declared one and sends anything else
+ * to Elasticsearch as written, so `<index>_sort_*,other` must never pass.
+ *
+ * @param indexName
+ * @param settings
+ */
+const allowedIndexNames = (indexName: string, settings: SearchSettings) => new Set([
+  indexName,
+  ..._.keys(settings.sorting || {}).map((key) => `${indexName}${key}`)
+]);
 
 const HIGHLIGHT_TAG = /<ais-highlight-0000000000\/?>/g;
 
@@ -241,7 +267,19 @@ export const POST: APIRoute = async ({ request, url }) => {
    * is the multi-tenancy hook — the same running process serves every atlas.
    */
   const config = getAtlasConfig();
-  const requests = getRequests(body);
+  const requests = _.map(getRequests(body), (request: any) => (
+    request?.params?.hitsPerPage > MAX_HITS_PER_PAGE
+      ? { ...request, params: { ...request.params, hitsPerPage: MAX_HITS_PER_PAGE } }
+      : request
+  ));
+
+  if (requests.length > MAX_REQUESTS) {
+    return new Response(JSON.stringify({ error: `At most ${MAX_REQUESTS} searches per request.` }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const indexNames = getIndexNames(requests);
 
   /**
@@ -269,6 +307,16 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
 
   const searchSettings = buildSearchSettings(searchConfig);
+  const allowed = allowedIndexNames(searchConfig.elasticsearch.index_name, searchSettings);
+
+  // Every request names exactly the search's index (or a declared sort of it).
+  if (_.some(requests, (request: any) => !allowed.has(request?.indexName))) {
+    return new Response(JSON.stringify({ error: 'Unknown search index for this atlas.' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const undeclared = findUndeclaredAttribute(requests, searchSettings);
 
   if (undeclared) {
@@ -299,7 +347,7 @@ export const POST: APIRoute = async ({ request, url }) => {
         projectIds: config?.core_data?.project_ids || [],
         modelIds: searchConfig.elasticsearch?.model_ids
       }),
-      ...(dateField ? { hooks: { beforeSearch: withYears(dateField) } } : {})
+      hooks: { beforeSearch: beforeSearch(dateField) }
     });
   } catch (error) {
     /**
@@ -315,7 +363,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     });
   }
 
-  return new Response(JSON.stringify(normalizeResults(results, dateField, config?.i18n?.default_locale || 'en')), {
+  return new Response(JSON.stringify(normalizeResults(results, dateField)), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store'

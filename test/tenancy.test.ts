@@ -390,6 +390,39 @@ describe.skipIf(!reachable)('one index per atlas', () => {
     }
   });
 
+  test('a sort suffix can\'t smuggle another index in (Searchkit sends any undeclared suffix as written)', async () => {
+    const smuggled = [
+      `${PER_ATLAS.a.alias}_sort_*,${PER_ATLAS.b.alias}`,
+      `${PER_ATLAS.a.alias}_sort_*,*`,
+      `${PER_ATLAS.a.alias}_sort_x,${PER_ATLAS.b.alias}`,
+      `${PER_ATLAS.a.alias}_sort_name_asc,${PER_ATLAS.b.alias}`,
+      `${PER_ATLAS.a.alias}_sort_undeclared`
+    ];
+
+    for (const name of smuggled) {
+      const { status, result } = await search(ATLAS_A, req({}, name), 'places');
+      expect(status, name).toBe(404);
+      expect(result, name).toBeUndefined();
+    }
+
+    // A declared sort still works.
+    const sorted = await search(ATLAS_A, req({}, `${PER_ATLAS.a.alias}_sort_name_asc`));
+    expect(sorted.status).toBe(200);
+    expect(names(sorted.result)).toEqual(['Alpha Public', 'Alpha Secret Holder']);
+  });
+
+  test('every request in a body must name the index: one without a name would search them all', async () => {
+    const body = [...req({}, PER_ATLAS.a.alias), { params: { query: '', hitsPerPage: 50 } }];
+    const { status } = await search(ATLAS_A, body);
+    expect(status).toBe(404);
+  });
+
+  test('a body may carry at most 20 searches', async () => {
+    const body = Array.from({ length: 21 }, () => req({}, PER_ATLAS.a.alias)[0]);
+    expect((await search(ATLAS_A, body)).status).toBe(400);
+    expect((await search(ATLAS_A, body.slice(0, 20))).status).toBe(200);
+  });
+
   test('its own physical index name is refused too (only the configured alias is served)', async () => {
     const { status } = await search(ATLAS_A, req({}, PER_ATLAS.a.physical));
     expect(status).toBe(404);
