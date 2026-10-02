@@ -1,4 +1,4 @@
-import ManifestThumbnail, { type Collection } from '@apps/search/ManifestThumbnail';
+import type { Collection } from '@apps/search/ManifestThumbnail';
 import MapSearchContext from '@apps/search/map/MapSearchContext';
 import Base from '@backend/api/coreData/base';
 import UserDefinedFieldView from '@components/UserDefinedFieldView';
@@ -7,7 +7,6 @@ import TranslationContext from '@contexts/TranslationContext';
 import {
   CoreData as CoreDataUtils,
   KeyValueList,
-  MediaGallery,
   RecordDetailPanel,
   useLoader
 } from '@performant-software/core-data';
@@ -17,6 +16,8 @@ import { getNameView } from '@utils/people';
 import { getCurrentId } from '@utils/router';
 import clsx from 'clsx';
 import {
+  lazy,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -28,6 +29,12 @@ import PanelHistoryContext from '@apps/search/map/PanelHistoryContext';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { omitExcluded } from '@utils/exclusions';
 import { getPhotoUrl } from '@utils/photos';
+
+// The IIIF viewer loads when a visitor opens the place's gallery (see
+// @components/MediaGallery), and the media thumbnails (Clover's, which bring
+// hls.js for video) when a place with media is shown — not with the map.
+const MediaGallery = lazy(() => import('@components/MediaGallery'));
+const ManifestThumbnail = lazy(() => import('@apps/search/ManifestThumbnail'));
 import { Map as MapUtils } from '@performant-software/geospatial';
 
 interface Props {
@@ -271,13 +278,15 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
       horizontal: true,
       items: _.map(collection.items, (item) => item),
       renderItem: (item) => (
-        <ManifestThumbnail
-          className='ps-6 pe-6'
-          itemCount={item.item_count}
-          name={_.first(item.label?.en)}
-          onClick={() => setManifestUrl(item.id)}
-          thumbnail={item.thumbnail}
+        <Suspense fallback={<div className='ps-6 pe-6 h-20 w-32' />}>
+          <ManifestThumbnail
+            className='ps-6 pe-6'
+            itemCount={item.item_count}
+            name={_.first(item.label?.en)}
+            onClick={() => setManifestUrl(item.id)}
+            thumbnail={item.thumbnail}
           />
+        </Suspense>
         ),
       renderTitle: () => title,
       title
@@ -486,10 +495,12 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
         )}
       </RecordDetailPanel>
       { manifestUrl && (
-        <MediaGallery
-          manifestUrl={manifestUrl}
-          onClose={() => setManifestUrl(null)}
-        />
+        <Suspense fallback={null}>
+          <MediaGallery
+            manifestUrl={manifestUrl}
+            onClose={() => setManifestUrl(null)}
+          />
+        </Suspense>
       )}
     </aside>
   );

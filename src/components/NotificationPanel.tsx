@@ -2,10 +2,11 @@ import { useStore } from '@nanostores/react';
 import NotificationsStore from '@store/notifications';
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
-// core-data's Notification comes with the whole core-data bundle (4 MB:
-// MapLibre, the IIIF viewers). It's on every page for the rare toast, so it
-// loads only once a notification is first shown.
-const Notification = lazy(() => import('@performant-software/core-data').then((module) => ({ default: module.Notification })));
+// core-data's Notification is on every page for the rare toast, so it loads
+// only once a notification is first shown. Imported through a one-export
+// module: a dynamic import of the package needs its whole namespace, which
+// pulled all of core-data (the IIIF viewers, hls.js) into every page.
+const Notification = lazy(() => import('@components/Notification'));
 
 const DEFAULT_ICON = {
   className: 'fill-green-400',

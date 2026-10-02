@@ -5,7 +5,7 @@ import ListHit from '@components/custom/project/ListHit'
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { useRuntimeConfig } from '@peripleo/peripleo';
 import { Highlight } from 'react-instantsearch';
-import { useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import {
   getAttributes,
   getConfiguredFacetLabel,
@@ -16,11 +16,14 @@ import {
   isInverse,
   isRelatedRecord
 } from '@utils/search';
-import { MediaGallery } from '@performant-software/core-data';
 import clsx from 'clsx';
 import TranslationContext from '@contexts/TranslationContext';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { Models } from '@types';
+
+// The IIIF viewer (Clover, OpenSeadragon, hls.js: about 2 MB of script) loads
+// only when a visitor opens an image hit's gallery, not with every search page.
+const MediaGallery = lazy(() => import('@components/MediaGallery'));
 
 interface Props {
   lang: string;
@@ -206,10 +209,12 @@ const Hits = (props: Props) => {
           { hits.map((hit) => renderItem(hit)) }
       </div>
       { manifestUrl && (
-        <MediaGallery
-          manifestUrl={manifestUrl}
-          onClose={() => setManifestUrl(null)}
-        />
+        <Suspense fallback={null}>
+          <MediaGallery
+            manifestUrl={manifestUrl}
+            onClose={() => setManifestUrl(null)}
+          />
+        </Suspense>
       )}
     </>
   );

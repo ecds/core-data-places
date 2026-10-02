@@ -77,6 +77,8 @@ const SaveButton = () => {
             <Input
               className='rounded-md'
               clearable={false}
+              // core-data's Input calls onBlur unconditionally.
+              onBlur={() => {}}
               onChange={(value: string) => setName(value)}
               value={name}
             />

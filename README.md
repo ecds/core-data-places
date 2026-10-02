@@ -88,6 +88,16 @@ image alongside the host.
 `scripts/precompress.mjs` writes at build time: the adapter sends everything
 uncompressed, and the map page's scripts are ~7 MB as built (MapLibre and the
 IIIF viewers), ~2 MB compressed. A proxy in front may still compress pages.
+Bundle size: Performant's and Peripleo's packages don't declare
+`sideEffects: false`, so `astro.config.mjs` tells Rollup their JavaScript is
+side-effect free (CSS kept); `scripts/single-maplibre.mjs` replaces the
+MapLibre copy baked into `@peripleo/maplibre`'s build with the app's own
+`maplibre-gl` (one instance, so the pmtiles:// protocol reaches the map); and
+the IIIF viewers (`@components/MediaGallery`, Clover thumbnails) load only
+when used. Lazy-load a package export through a one-export module of our own
+(see `src/components/MediaGallery.tsx`): a dynamic `import()` of the package
+itself needs its whole namespace and pulls everything in up front. Map page:
+8.0 → 2.9 MB of script; home/pages 0.18 MB.
 Each atlas also serves `/robots.txt` and `/sitemap.xml` (its pages, searches
 and published records' detail pages; an index of `/sitemap/<n>.xml` files over
 40,000 addresses), and none for a draft.

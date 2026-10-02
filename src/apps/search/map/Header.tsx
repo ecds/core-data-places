@@ -69,6 +69,9 @@ const Header = (props: Props) => {
           clearable
           disabled={!allowSearchChange}
           icon='search'
+          // core-data's Input calls onBlur unconditionally; without one,
+          // leaving the box throws.
+          onBlur={() => {}}
           onChange={(value) => refine(value)}
           placeholder={t('search')}
           value={query}
