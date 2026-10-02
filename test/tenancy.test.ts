@@ -1,8 +1,10 @@
 /**
  * Two-tenant security slice for the Elasticsearch search handler.
  *
- * The shared index holds every atlas's documents; the only thing keeping one
- * atlas from reading another's is the server-side handler. These tests run the
+ * A shared index holds every atlas's documents; the only thing keeping one
+ * atlas from reading another's is the server-side handler. With one index per
+ * atlas (an alias each, named in the atlas's config), the handler must also
+ * keep an atlas to its own index - the last block covers that. These tests run the
  * real handler (src/pages/api/search.json.ts) against a real Elasticsearch,
  * with a hermetic index seeded with sentinel documents for two tenants:
  * published, hidden, and a document carrying an "internal" field that must
@@ -309,5 +311,103 @@ describe.skipIf(!reachable)('two-tenant security slice', () => {
       expect(names(response.results[0])).toEqual(['Alpha Public']);
       expect(response.results[1].facets.types).toEqual({ Church: 1, Cemetery: 1 });
     });
+  });
+});
+
+/**
+ * One index per atlas: each atlas's config names its own index (an alias over
+ * a timestamped physical index, as the indexer creates them). Tenant A must not
+ * reach tenant B's index by any name, and the project filter still applies
+ * inside an atlas's own index.
+ */
+const PER_ATLAS = {
+  a: { alias: 'og_tenancy_test_project_1', physical: 'og_tenancy_test_project_1_20261002000000000' },
+  b: { alias: 'og_tenancy_test_project_2', physical: 'og_tenancy_test_project_2_20261002000000000' }
+};
+
+const perAtlas = (projectId: string, index: string, modelId: string) => atlas([projectId], [searchEntry({
+  elasticsearch: { index_name: index, model_ids: [modelId], facet_attributes: ['types'] }
+})]);
+
+describe.skipIf(!reachable)('one index per atlas', () => {
+  const ATLAS_A = perAtlas('1', PER_ATLAS.a.alias, '11');
+  const ATLAS_B = perAtlas('2', PER_ATLAS.b.alias, '21');
+
+  beforeAll(async () => {
+    process.env.OG_ELASTICSEARCH_URL = ES_URL;
+    const mapping = fs.existsSync(MAPPING_PATH) ? JSON.parse(fs.readFileSync(MAPPING_PATH, 'utf8')) : {};
+
+    for (const [tenant, { alias, physical }] of Object.entries(PER_ATLAS)) {
+      await es('DELETE', `/${physical}`);
+      const created = await es('PUT', `/${physical}`, { mappings: mapping.mappings, settings: mapping.settings, aliases: { [alias]: {} } });
+      expect(created.status, JSON.stringify(created.body)).toBe(200);
+
+      const projectId = tenant === 'a' ? '1' : '2';
+      for (const doc of DOCS.filter((d) => d.project_id === projectId)) {
+        const { id, ...source } = doc;
+        await es('PUT', `/${alias}/_doc/${id}?refresh=true`, source);
+      }
+    }
+
+    // A stray copy of A's public place inside B's index: reachable from A only
+    // if A could search B's index, and from B only if the project filter failed.
+    await es('PUT', `/${PER_ATLAS.b.alias}/_doc/a-stray?refresh=true`, { ...DOCS[0], uuid: 'a-stray', name: 'Alpha Stray In B' });
+  }, 30_000);
+
+  afterAll(async () => {
+    for (const { physical } of Object.values(PER_ATLAS)) {
+      await es('DELETE', `/${physical}`);
+    }
+  });
+
+  test('each atlas reads its own index', async () => {
+    const a = await search(ATLAS_A, req({}, PER_ATLAS.a.alias));
+    expect(a.status).toBe(200);
+    expect(names(a.result)).toEqual(['Alpha Public', 'Alpha Secret Holder']);
+
+    const b = await search(ATLAS_B, req({}, PER_ATLAS.b.alias));
+    expect(names(b.result)).toEqual(['Bravo Public']);
+  });
+
+  test('an atlas cannot name another atlas\'s index, in any form', async () => {
+    const names = [
+      PER_ATLAS.b.alias,
+      PER_ATLAS.b.physical,
+      `${PER_ATLAS.b.alias}_sort_name_asc`,
+      'og_tenancy_test_project_*',
+      'og_tenancy_test_project_2*',
+      `${PER_ATLAS.a.alias},${PER_ATLAS.b.alias}`,
+      `${PER_ATLAS.a.alias}*`,
+      '_all',
+      '*',
+      INDEX
+    ];
+
+    for (const name of names) {
+      const { status, result } = await search(ATLAS_A, req({}, name));
+      expect(status, name).toBe(404);
+      expect(result, name).toBeUndefined();
+    }
+  });
+
+  test('its own physical index name is refused too (only the configured alias is served)', async () => {
+    const { status } = await search(ATLAS_A, req({}, PER_ATLAS.a.physical));
+    expect(status).toBe(404);
+  });
+
+  test('the project filter still applies inside an atlas\'s own index', async () => {
+    const b = await search(ATLAS_B, req({ query: 'Alpha' }, PER_ATLAS.b.alias));
+    expect(b.status).toBe(200);
+    expect(names(b.result)).toEqual([]);
+  });
+
+  test('a config pointed at another atlas\'s index still shows only its own project', async () => {
+    // A misconfiguration, not something the platform emits (it always writes
+    // the atlas's own index name): tenant A configured with B's index.
+    const misconfigured = perAtlas('1', PER_ATLAS.b.alias, '11');
+    const { status, result } = await search(misconfigured, req({}, PER_ATLAS.b.alias));
+    expect(status).toBe(200);
+    expect(names(result)).toEqual(['Alpha Stray In B']);
+    expect(names(result)).not.toContain('Bravo Public');
   });
 });
