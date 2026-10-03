@@ -1,6 +1,11 @@
 import _ from 'underscore';
 import { parameterize } from './exclusions';
 import { isSafeUrl } from './htmlPolicy';
+import { resolveAssetPath } from './images';
+
+// One of the atlas's own uploaded images (a photo packed in a KMZ, stored
+// at import), kept as a console path.
+const ASSET_PATH = /^\/core_data\/public\/v1\/assets\/[^/?#]+\//;
 
 /**
  * A place's photo from one of its own fields.
@@ -23,9 +28,10 @@ export const getPhotoField = (config: any, model: string): string | null => (
 
 /**
  * The record's photo address from `field`, or null when it has none or the
- * value isn't an http(s) image address.
+ * value isn't an http(s) image address — or one of the atlas's own images,
+ * resolved against `assetBase` (the console's address).
  */
-export const getPhotoUrl = (record: any, field: string | null | undefined): string | null => {
+export const getPhotoUrl = (record: any, field: string | null | undefined, assetBase?: string | null): string | null => {
   if (!field || !record?.user_defined) {
     return null;
   }
@@ -35,7 +41,8 @@ export const getPhotoUrl = (record: any, field: string | null | undefined): stri
     uuid === field || value?.label === field || parameterize(value?.label) === key
   )) as [string, any] | undefined;
 
-  const url = typeof entry?.[1]?.value === 'string' ? entry[1].value.trim() : '';
+  const value = typeof entry?.[1]?.value === 'string' ? entry[1].value.trim() : '';
+  const url = ASSET_PATH.test(value) && assetBase ? resolveAssetPath(value, assetBase) || '' : value;
 
   return /^https?:\/\//i.test(url) && isSafeUrl(url, 'img') ? url : null;
 };

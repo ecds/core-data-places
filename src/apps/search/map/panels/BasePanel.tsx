@@ -27,6 +27,7 @@ import {
 import _ from 'underscore';
 import PanelHistoryContext from '@apps/search/map/PanelHistoryContext';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
+import { useRuntimeConfig } from '@peripleo/peripleo';
 import { omitExcluded } from '@utils/exclusions';
 import { getPhotoUrl } from '@utils/photos';
 
@@ -61,6 +62,9 @@ const BasePanel = (props: Props) => {
 
   const navigate = useNavigate();
   const config = useSearchConfig();
+  // The console's address: a photo field can hold one of the atlas's own
+  // images (a KMZ's packed photo) as a console path.
+  const assetBase = (useRuntimeConfig() as any)?.core_data?.url;
   const { lang, t } = useContext(TranslationContext);
   const { setSelected } = useSelection();
 
@@ -214,7 +218,7 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
 
       // The record's own photo field. Read from the record as loaded: the
       // field is excluded from the panel's field list.
-      return getPhotoUrl(data?.[props.name], props.photoField)
+      return getPhotoUrl(data?.[props.name], props.photoField, assetBase)
     })
   }, [item, mediaContentsLoading])
   

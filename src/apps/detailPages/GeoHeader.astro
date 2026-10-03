@@ -26,7 +26,7 @@ const { mediaContents } = await service.getRelatedMediaContents(record.uuid);
 
 // A media item's image, else the place's own photo field (an upload's Photo
 // column).
-const coverUrl = getCoverImage(mediaContents) || getPhotoUrl(record, getPhotoField(getAtlasConfig(), model));
+const coverUrl = getCoverImage(mediaContents) || getPhotoUrl(record, getPhotoField(getAtlasConfig(), model), (getAtlasConfig() as any)?.core_data?.url);
 ---
 {(geometry || coverUrl) && (
   <div class='w-full pb-6 relative h-[300px]'>

@@ -23,6 +23,14 @@ describe('photos', () => {
     expect(getPhotoUrl(record, 'f1e2d3c4-0000-4000-8000-000000000001')).toBe(PHOTO);
   });
 
+  it('resolves one of the atlas\'s own images (a KMZ\'s packed photo) against the console', () => {
+    const packed = { user_defined: { u: { label: 'Photo', type: 'String', value: '/core_data/public/v1/assets/abc123/telfair.jpg' } } };
+    expect(getPhotoUrl(packed, 'Photo', 'https://console.example.edu/')).toBe('https://console.example.edu/core_data/public/v1/assets/abc123/telfair.jpg');
+    expect(getPhotoUrl(packed, 'Photo')).toBeNull();
+    const other = { user_defined: { u: { label: 'Photo', type: 'String', value: '/elsewhere/telfair.jpg' } } };
+    expect(getPhotoUrl(other, 'Photo', 'https://console.example.edu')).toBeNull();
+  });
+
   it('gives nothing without a field, a value or a safe http(s) address', () => {
     expect(getPhotoUrl(record, null)).toBeNull();
     expect(getPhotoUrl(record, 'missing')).toBeNull();
