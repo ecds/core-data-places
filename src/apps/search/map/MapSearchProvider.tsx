@@ -1,7 +1,15 @@
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useCallback, useMemo, useRef } from 'react';
 import { useGeoSearch, useInfiniteHits, useSearchBox } from 'react-instantsearch';
 import { PersistentSearchStateContextProvider } from '@performant-software/core-data';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
+
+/**
+ * Identifies a page of results: its page number and the search it belongs to
+ * (the search state without the page).
+ */
+const toResultsKey = (results: any) => (
+  results ? `${results.page}:${JSON.stringify({ ...results._state, page: undefined })}` : ''
+);
 
 const MapSearchProvider = (props: { children: ReactNode }) => {
   const geoSearch = useGeoSearch();
@@ -20,20 +28,41 @@ const MapSearchProvider = (props: { children: ReactNode }) => {
    */
   const limit = searchConfig?.result_limit;
 
-  const cappedInfiniteHits = useMemo(() => {
-    if (!limit) {
-      return infiniteHits;
+  /**
+   * One "show more" per page received. `useProgressiveSearch` can ask twice
+   * for the same page (its effect runs again when the same results re-render),
+   * and InstantSearch's showMore requests the page after the one last
+   * *requested*: the second call skipped a page, and the helper then dropped
+   * the skipped page's response as outdated — 18 of 38 results never reached
+   * the list or the map (a search with a query and a filter, every time).
+   */
+  const { results: currentResults, showMore: connectorShowMore } = infiniteHits as any;
+  const resultsKey = toResultsKey(currentResults);
+  const requested = useRef({ key: '', done: false });
+
+  if (requested.current.key !== resultsKey) {
+    requested.current = { key: resultsKey, done: false };
+  }
+
+  const showMore = useCallback(() => {
+    if (requested.current.key !== resultsKey || requested.current.done) {
+      return;
     }
 
+    requested.current.done = true;
+    connectorShowMore();
+  }, [connectorShowMore, resultsKey]);
+
+  const cappedInfiniteHits = useMemo(() => {
     const { results } = infiniteHits as any;
     const loaded = ((results?.page ?? 0) + 1) * (results?.hitsPerPage || 0);
 
-    if (loaded >= limit) {
-      return { ...infiniteHits, isLastPage: true };
+    if (limit && loaded >= limit) {
+      return { ...infiniteHits, showMore, isLastPage: true };
     }
 
-    return infiniteHits;
-  }, [infiniteHits, limit]);
+    return { ...infiniteHits, showMore };
+  }, [infiniteHits, limit, showMore]);
 
   return (
     <PersistentSearchStateContextProvider
