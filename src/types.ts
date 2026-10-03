@@ -175,12 +175,20 @@ export interface Configuration {
 
   layers?: Array<{
     name: string,
-    layer_type: 'geojson' | 'vector' | 'raster' | 'georeference' | 'pmtiles',
+    layer_type: 'geojson' | 'vector' | 'raster' | 'georeference' | 'pmtiles' | 'image',
     url: string,
     overlay?: boolean,
 
     /**
-     * georeference layers only: opacity of the warped image (0-1).
+     * image layers only (a KML/KMZ GroundOverlay): where the image's corners
+     * go, [top left, top right, bottom right, bottom left] as [lon, lat].
+     */
+    coordinates?: [number, number][],
+
+    /**
+     * Overlays: how opaque the layer draws (0-1); visitors can change it in
+     * the layers control. Unset: 0.5 for a georeferenced map, else 1
+     * (utils/overlays.ts).
      */
     opacity?: number,
 

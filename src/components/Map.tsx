@@ -1,7 +1,6 @@
 import TranslationContext from '@contexts/TranslationContext';
 import {
   Icon,
-  LayerMenu,
   OverlayLayers,
   Peripleo as PeripleoUtils
 } from '@performant-software/core-data';
@@ -10,8 +9,14 @@ import { MapProvider, useRuntimeConfig } from '@peripleo/peripleo';
 import clsx from 'clsx';
 import { type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import _ from 'underscore';
+import defaults from '@config' with { type: 'json' };
+import { resolveAssetPath } from '@utils/images';
 import { getDatedLayers, getInitialMapYear, getLayersForYear, getMapYears } from '@utils/mapYears';
+import { hasOpacity, opacityOf } from '@utils/overlays';
+import ImageOverlayLayer from './ImageOverlayLayer';
+import LayersControl from './LayersControl';
 import MapYearControl from './MapYearControl';
+import OverlayOpacity from './OverlayOpacity';
 import PMTilesLayer from './PMTilesLayer';
 
 /**
@@ -130,7 +135,12 @@ interface Props {
 
 const Map = (props: Props) => {
   const config = useRuntimeConfig();
-  const { baseLayers, dataLayers } = useMemo(() => PeripleoUtils.filterLayers(config), [config]);
+  // An atlas whose base maps were all removed (only overlays left) still gets
+  // one: the defaults' OpenStreetMap, as a new atlas starts with.
+  const { baseLayers, dataLayers } = useMemo(() => {
+    const layers = PeripleoUtils.filterLayers(config);
+    return _.isEmpty(layers.baseLayers) ? { ...layers, baseLayers: (defaults as any).layers } : layers;
+  }, [config]);
 
   /**
    * Dated historic maps: with two or more, a year slider shows them (one year
@@ -142,12 +152,41 @@ const Map = (props: Props) => {
   const menuLayers = useMemo(() => (yearSlider ? _.difference(dataLayers, datedLayers) : dataLayers), [dataLayers, datedLayers, yearSlider]);
 
   const [baseLayer, setBaseLayer] = useState(_.first(baseLayers));
-  const [overlays, setOverlays] = useState([]);
+  // The listed overlays shown now: at first, the ones set to show at open.
+  const [overlays, setOverlays] = useState<any[]>(() => _.filter(menuLayers, (layer: any) => layer.default === true));
   const [mapYear, setMapYear] = useState<number | null>(() => getInitialMapYear(datedLayers));
+  // Opacities the visitor has chosen, by overlay name.
+  const [opacities, setOpacities] = useState<Record<string, number>>({});
+
+  const yearOverlays = useMemo(() => (yearSlider ? getLayersForYear(datedLayers, mapYear) : []), [yearSlider, datedLayers, mapYear]);
 
   const visibleOverlays = useMemo(() => (
-    yearSlider ? [...overlays, ...getLayersForYear(datedLayers, mapYear)] : overlays
-  ), [overlays, yearSlider, datedLayers, mapYear]);
+    _.map([...overlays, ...yearOverlays], (overlay: any) => ({ ...overlay, opacity: opacityOf(overlay, opacities) }))
+  ), [overlays, yearOverlays, opacities]);
+
+  // Uploaded images (a KML overlay's) are stored as console paths.
+  const assetBase = (config as any)?.core_data?.url;
+
+  const onToggleOverlay = (name: string, visible: boolean) => setOverlays((current) => (
+    _.filter(menuLayers, (layer: any) => (layer.name === name ? visible : _.some(current, (c: any) => c.name === layer.name)))
+  ));
+
+  const controlOverlays = [
+    ..._.map(menuLayers, (layer: any) => ({
+      name: layer.name,
+      visible: _.some(overlays, (o: any) => o.name === layer.name),
+      opacity: opacityOf(layer, opacities),
+      togglable: true,
+      adjustable: hasOpacity(layer)
+    })),
+    ..._.map(yearOverlays, (layer: any) => ({
+      name: layer.name,
+      visible: true,
+      opacity: opacityOf(layer, opacities),
+      togglable: false,
+      adjustable: hasOpacity(layer)
+    }))
+  ];
 
   const { t } = useContext(TranslationContext);
 
@@ -188,16 +227,16 @@ const Map = (props: Props) => {
             zoomOut={<Icon name='zoom_out' />}
             zoomOutProps={{ className: buttonClass }}
           />
-          { [...baseLayers, ...menuLayers].length > 1 && (
-            <LayerMenu
+          { (baseLayers.length > 1 || controlOverlays.length > 0) && (
+            <LayersControl
               baseLayer={baseLayer?.name}
               baseLayers={baseLayers}
-              baseLayersLabel={t('baseLayers')}
               className={buttonClass}
-              dataLayers={menuLayers}
-              onChangeBaseLayer={setBaseLayer}
-              onChangeOverlays={setOverlays}
-              overlaysLabel={t('overlays')}
+              labels={{ button: t('mapLayers'), baseLayers: t('baseLayers'), overlays: t('overlays'), opacity: t('opacity') }}
+              onChangeBaseLayer={(name) => setBaseLayer(_.findWhere(baseLayers, { name }))}
+              onChangeOpacity={(name, value) => setOpacities((current) => ({ ...current, [name]: value }))}
+              onToggleOverlay={onToggleOverlay}
+              overlays={controlOverlays}
             />
           )}
           { yearSlider && (
@@ -215,7 +254,7 @@ const Map = (props: Props) => {
               position, and its georeferenced-map layer is added only on mount,
               so a different map in the same position (the year slider) must
               remount rather than update. */ }
-          { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type !== 'pmtiles').map((overlay: any) => (
+          { _.filter(visibleOverlays, (overlay: any) => !['pmtiles', 'image'].includes(overlay.layer_type)).map((overlay: any) => (
             <OverlayLayers
               key={overlay.name}
               overlays={[overlay]}
@@ -226,10 +265,23 @@ const Map = (props: Props) => {
               id={overlay.name}
               key={overlay.name}
               labelField={overlay.label_field}
+              opacity={overlay.opacity}
               styles={overlay.styles}
               url={overlay.url}
             />
           ))}
+          { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type === 'image').map((overlay: any) => (
+            <ImageOverlayLayer
+              coordinates={overlay.coordinates}
+              id={overlay.name}
+              key={overlay.name}
+              opacity={overlay.opacity}
+              url={resolveAssetPath(overlay.url, assetBase) as string}
+            />
+          ))}
+          <OverlayOpacity
+            overlays={visibleOverlays}
+          />
           { props.children }
           <KeepOverlaysBelowData
             names={_.pluck(visibleOverlays, 'name')}

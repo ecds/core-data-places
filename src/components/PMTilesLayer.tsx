@@ -1,7 +1,7 @@
 import { useLoadedMap } from '@peripleo/maplibre';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * The pmtiles:// protocol only needs to be registered with MapLibre once per
@@ -47,8 +47,35 @@ interface Props {
    * (Optional) source min/max zoom for template URLs. Defaults: 6 / 15.
    */
   minzoom?: number,
-  maxzoom?: number
+  maxzoom?: number,
+
+  /**
+   * (Optional) the overlay's opacity (0–1), scaling each style's own
+   * (a default fill at 0.06 drawn at 50% is 0.03). Default 1.
+   */
+  opacity?: number
 }
+
+// Each layer type's opacity paint properties.
+const OPACITY_PROPERTIES: Record<string, string[]> = {
+  fill: ['fill-opacity'],
+  line: ['line-opacity'],
+  circle: ['circle-opacity', 'circle-stroke-opacity'],
+  symbol: ['text-opacity', 'icon-opacity'],
+  raster: ['raster-opacity'],
+  'fill-extrusion': ['fill-extrusion-opacity'],
+  heatmap: ['heatmap-opacity']
+};
+
+// A style's paint with its opacity properties scaled by `opacity`.
+const scaledPaint = (style: any, opacity: number) => {
+  const paint = { ...(style.paint || {}) };
+  (OPACITY_PROPERTIES[style.type] || []).forEach((property) => {
+    const base = style.paint?.[property] ?? 1;
+    if (typeof base === 'number') paint[property] = base * opacity;
+  });
+  return paint;
+};
 
 const DEFAULT_COLOR = '#BC2635';
 
@@ -108,6 +135,10 @@ const defaultStyles = (labelField: string) => [{
  */
 const PMTilesLayer = (props: Props) => {
   const map = useLoadedMap() as any;
+  const opacity = props.opacity ?? 1;
+  // Read when layers are (re)added, so they start at the current opacity.
+  const opacityRef = useRef(opacity);
+  opacityRef.current = opacity;
 
   useEffect(() => {
     if (!map) {
@@ -150,6 +181,7 @@ const PMTilesLayer = (props: Props) => {
           if (!map.getLayer(layerId)) {
             map.addLayer({
               ...style,
+              paint: scaledPaint(style, opacityRef.current),
               id: layerId,
               source: sourceId
             });
@@ -186,6 +218,22 @@ const PMTilesLayer = (props: Props) => {
       }
     };
   }, [map, props.url]);
+
+  // The overlay's opacity times each style's own (a number; an expression is
+  // left as styled), as the visitor changes it.
+  useEffect(() => {
+    if (!map) return;
+
+    const styles = props.styles || defaultStyles(props.labelField || 'name');
+    styles.forEach((style) => {
+      const layerId = `${props.id}-${style.id}`;
+      if (!map.getLayer(layerId)) return;
+
+      Object.entries(scaledPaint(style, opacity)).forEach(([property, value]) => {
+        if ((OPACITY_PROPERTIES[style.type] || []).includes(property)) map.setPaintProperty(layerId, property, value);
+      });
+    });
+  }, [map, opacity]);
 
   return null;
 };

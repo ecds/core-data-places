@@ -542,5 +542,9 @@
   "goToHomePage": {
     "tinaLabel": "Go to the home page",
     "defaultValue": "Go to the home page"
+  },
+  "opacity": {
+    "tinaLabel": "Overlay opacity",
+    "defaultValue": "Opacity"
   }
 }
