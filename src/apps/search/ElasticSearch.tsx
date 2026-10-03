@@ -4,6 +4,7 @@ import { InstantSearch } from 'react-instantsearch';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { createSearchClient } from '@search/elasticsearch/client';
 import { createRouting } from '@search/elasticsearch/routing';
+import { DEFAULT_SORT_NAMES } from '@search/elasticsearch/settings';
 
 /**
  * The search provider: an `<InstantSearch>` wrapper over the server-side
@@ -38,14 +39,25 @@ const ElasticSearch = (props: { children: ReactNode }) => {
   }, [elasticsearch]);
 
   /**
+   * The sorts the search declares (A–Z/Z–A always, then the atlas's own,
+   * incl. Oldest/Newest first when it has dates).
+   */
+  const sortNames = useMemo(() => [
+    ...DEFAULT_SORT_NAMES,
+    ...(elasticsearch?.sort_attributes || []).map((sort: any) => sort.name)
+  ], [elasticsearch]);
+
+  /**
    * Query, refinements and sort are reflected in the URL's query string (see
    * `routing.ts`); range facets need naming so their `min:max` values are read
-   * back as ranges rather than list refinements.
+   * back as ranges rather than list refinements, and only declared sorts are
+   * read back.
    */
   const routing = useMemo(() => createRouting({
     indexName: elasticsearch.index_name,
-    rangeAttributes: facetState.rangeAttributes
-  }), [elasticsearch.index_name, facetState.rangeAttributes]);
+    rangeAttributes: facetState.rangeAttributes,
+    sortNames
+  }), [elasticsearch.index_name, facetState.rangeAttributes, sortNames]);
 
   return (
     <InstantSearch

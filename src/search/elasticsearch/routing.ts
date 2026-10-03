@@ -26,6 +26,14 @@ interface Options {
   indexName: string;
   /** Attributes rendered as range facets: their route values are `min:max` strings. */
   rangeAttributes?: string[];
+  /**
+   * The search's sort names (`name_asc`, `date_desc`, …). A `?sort=` naming
+   * anything else — an old link to a sort the atlas no longer has — is
+   * dropped (relevance) rather than sent: the search handler refuses an
+   * undeclared sort, and the whole search would fail. Omitted: any name is
+   * read back.
+   */
+  sortNames?: string[];
 }
 
 /**
@@ -43,7 +51,7 @@ const toSortName = (sortBy: string | undefined, indexName: string) => {
   return sortBy.slice(indexName.length + SORT_MARKER.length);
 };
 
-export const createRouting = ({ indexName, rangeAttributes = [] }: Options) => ({
+export const createRouting = ({ indexName, rangeAttributes = [], sortNames }: Options) => ({
   router: history({
     cleanUrlOnDispose: false
   }),
@@ -84,7 +92,7 @@ export const createRouting = ({ indexName, rangeAttributes = [] }: Options) => (
         state.query = query;
       }
 
-      if (sort) {
+      if (_.isString(sort) && sort && (!sortNames || sortNames.includes(sort))) {
         state.sortBy = `${indexName}${SORT_MARKER}${sort}`;
       }
 

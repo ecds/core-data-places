@@ -99,6 +99,11 @@ const DEFAULT_SORTING = {
 };
 
 /**
+ * The names of the sorts every atlas gets (A–Z, Z–A), as `?sort=` writes them.
+ */
+export const DEFAULT_SORT_NAMES = ['name_asc', 'name_desc'];
+
+/**
  * The top-level document field for a dotted or facet path: `contained_in_place.name`
  * → `contained_in_place`, `denomination_facet` → `denomination_facet`.
  *

@@ -1,4 +1,5 @@
 import SearchHighlight from '@apps/search/map/SearchHighlight';
+import SortMenu from '@apps/search/map/SortMenu';
 import useHoverable from '@apps/search/map/useHoverable';
 import useSelectable from '@apps/search/map/useSelectable';
 import { SearchList, useCachedHits } from '@performant-software/core-data';
@@ -82,6 +83,7 @@ const ListView = (props: Props) => {
   return (
     <aside
       className={clsx(
+        'relative',
         'flex',
         'flex-col',
         'h-full',
@@ -91,6 +93,12 @@ const ListView = (props: Props) => {
         props.className
       )}
     >
+      { /* Sits at the right end of the list's own "N results" row (40 px). */ }
+      <div
+        className='absolute top-0 right-0 z-10 h-10 flex items-center pr-4'
+      >
+        <SortMenu />
+      </div>
       <SearchList
         attributes={attributes}
         count={nbHits}

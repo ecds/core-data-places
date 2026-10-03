@@ -40,4 +40,21 @@ describe('routing', () => {
       [indexName]: { refinementList: { types: ['Church'] } }
     });
   });
+
+  test('only declared sorts are read back when the search names them', () => {
+    const declared = createRouting({ indexName, sortNames: ['name_asc', 'name_desc', 'date_asc', 'date_desc'] }).stateMapping;
+
+    expect(declared.routeToState({ sort: 'date_desc' })).toEqual({
+      [indexName]: { sortBy: `${indexName}_sort_date_desc` }
+    });
+
+    // An old link to a sort the atlas no longer has: relevance, not a failed search.
+    expect(declared.routeToState({ sort: 'founded_asc', q: 'church' })).toEqual({
+      [indexName]: { query: 'church' }
+    });
+
+    // Repeated or odd values never become an index name.
+    expect(declared.routeToState({ sort: ['date_asc', 'name_asc'] })).toEqual({ [indexName]: {} });
+    expect(declared.routeToState({ sort: '*,other' })).toEqual({ [indexName]: {} });
+  });
 });
