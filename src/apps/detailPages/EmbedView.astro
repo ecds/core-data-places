@@ -1,0 +1,37 @@
+---
+import { getAtlasConfig } from '@atlas/server';
+import { getEmbed, getEmbedField } from '@utils/embeds';
+
+interface Props {
+  model: string;
+  record: any;
+  t: (key: string, options?: any) => string;
+}
+
+const { model, record, t } = Astro.props;
+
+// A 360° view, tour or video from the record's own field (embed_field), in
+// its host's player; nothing for a value that isn't a known host's link.
+const embed = getEmbed(record, getEmbedField(getAtlasConfig(), model));
+const heading = embed && ({ panorama: t('view360'), tour: t('virtualTour'), video: t('video'), map: t('mapView') } as Record<string, string>)[embed.kind];
+---
+{ embed && (
+  <section class='py-6' aria-label={heading}>
+    <h2 class='font-semibold font-body pb-3'>{ heading }</h2>
+    <div class='relative w-full overflow-hidden rounded-md bg-neutral-900 aspect-video'>
+      <iframe
+        allow='accelerometer; autoplay; fullscreen; gyroscope; magnetometer; xr-spatial-tracking; picture-in-picture'
+        allowfullscreen
+        class='absolute inset-0 h-full w-full border-0'
+        loading='lazy'
+        referrerpolicy='strict-origin-when-cross-origin'
+        sandbox='allow-scripts allow-same-origin allow-popups allow-presentation allow-forms'
+        src={embed.src}
+        title={`${heading}: ${record.name || ''}`.trim()}
+      />
+    </div>
+    <p class='pt-2 text-sm text-neutral-700'>
+      <a class='underline' href={embed.url} rel='noopener noreferrer' target='_blank'>{ t('openOn', { provider: embed.provider }) }</a>
+    </p>
+  </section>
+) }

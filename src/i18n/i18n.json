@@ -546,5 +546,25 @@
   "opacity": {
     "tinaLabel": "Overlay opacity",
     "defaultValue": "Opacity"
+  },
+  "view360": {
+    "tinaLabel": "360° view heading",
+    "defaultValue": "360° view"
+  },
+  "virtualTour": {
+    "tinaLabel": "Virtual tour heading",
+    "defaultValue": "Virtual tour"
+  },
+  "video": {
+    "tinaLabel": "Video heading",
+    "defaultValue": "Video"
+  },
+  "mapView": {
+    "tinaLabel": "Embedded map heading",
+    "defaultValue": "Map view"
+  },
+  "openOn": {
+    "tinaLabel": "Open the embedded view on its host",
+    "defaultValue": "Open on {{provider}}"
   }
 }
