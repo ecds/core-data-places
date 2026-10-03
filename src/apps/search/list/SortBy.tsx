@@ -12,6 +12,7 @@ const SortBy = () => {
   const { t } = useContext(TranslationContext);
   const {
     current: currentSort,
+    currentRefinement,
     items: sortFields,
     refine
   } = useSort();
@@ -41,15 +42,21 @@ const SortBy = () => {
           <DropdownMenu.Content
             className='flex flex-col bg-white rounded-md shadow-lg pt-1 w-[150px]'
           >
-            {sortFields.map((field) => (
-              <DropdownMenu.Item
-                className='hover:cursor-pointer hover:bg-neutral-200 data-[highlighted]:bg-neutral-200 px-2 py-1 outline-hidden'
-                onSelect={() => refine(field.value)}
-                key={field.value}
-              >
-                { field.label }
-              </DropdownMenu.Item>
-            ))}
+            { /* Radio items: the current sort is announced as checked. */ }
+            <DropdownMenu.RadioGroup
+              onValueChange={refine}
+              value={currentRefinement}
+            >
+              {sortFields.map((field) => (
+                <DropdownMenu.RadioItem
+                  className='hover:cursor-pointer hover:bg-neutral-200 data-[highlighted]:bg-neutral-200 data-[state=checked]:font-semibold px-2 py-1 outline-hidden'
+                  key={field.value}
+                  value={field.value}
+                >
+                  { field.label }
+                </DropdownMenu.RadioItem>
+              ))}
+            </DropdownMenu.RadioGroup>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
