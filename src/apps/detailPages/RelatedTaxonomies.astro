@@ -5,6 +5,7 @@ import ServiceFactory from '@services/coreData/factory';
 import { getAtlasConfig } from '@atlas/server';
 import { hasDetailPage } from '@utils/detailPagePaths';
 import { groupRelationships } from '@utils/detailPages';
+import { fetchTopics, getTopicsConfig } from '@utils/topics';
 
 interface Props {
   excludes: string[];
@@ -19,15 +20,22 @@ const service = ServiceFactory.getService(model);
 const { taxonomies } = await service.getRelatedTaxonomies(uuid);
 const relationships = groupRelationships(taxonomies, excludes);
 const { t } = await getTranslations(lang);
+
+// With topics on, a category that is a topic links to its topic page.
+const config = getAtlasConfig();
+const topics = getTopicsConfig(config).enabled
+  ? new Map((await fetchTopics(config).catch(() => [])).map((topic) => [topic.name, topic.slug]))
+  : null;
+const taxonomyPages = hasDetailPage('taxonomies', config);
 ---
 {Object.keys(relationships).map((uuid) => (
   <Relations
     data={relationships[uuid]}
     icon='bullet'
     label={t(uuid)}
-    resolveDetailUrl={(taxonomy) => `/${lang}/taxonomies/${taxonomy.uuid}`}
+    resolveDetailUrl={(taxonomy) => (topics?.has(taxonomy.name) ? `/${lang}/topics/${encodeURIComponent(topics.get(taxonomy.name))}` : `/${lang}/taxonomies/${taxonomy.uuid}`)}
     resolveName={taxonomy => taxonomy.name}
-    showLinks={hasDetailPage('taxonomies', getAtlasConfig())}
+    showLinks={taxonomyPages || Boolean(topics && relationships[uuid].every((taxonomy) => topics.has(taxonomy.name)))}
     uuid={uuid}
   />
 ))}

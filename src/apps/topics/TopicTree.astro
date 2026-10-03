@@ -1,0 +1,39 @@
+---
+import type { TopicNode, Topic } from '@utils/topics';
+
+interface Props {
+  lang: string;
+  nodes: TopicNode[];
+  /** Heading level of these groups (2 at the top). */
+  level?: number;
+  placesLabel: (count: number) => string;
+}
+
+const { lang, nodes, level = 2, placesLabel } = Astro.props;
+const Heading = `h${Math.min(level, 6)}`;
+const link = (topic: Topic) => `/${lang}/topics/${encodeURIComponent(topic.slug)}`;
+---
+<ul class='flex flex-col gap-6'>
+  { nodes.map((node) => (
+    <li>
+      <Heading class={level === 2 ? 'text-2xl font-header pb-2' : 'text-lg font-semibold pb-1'}>{ node.label }</Heading>
+      { node.topics.length > 0 && (
+        <ul class='flex flex-wrap gap-2 pb-2'>
+          { node.topics.map((topic) => (
+            <li>
+              <a class='inline-flex items-baseline gap-1.5 rounded-full border border-neutral-300 px-3 py-1 hover:bg-neutral-100 focus-visible:ring-2' href={link(topic)}>
+                <span>{ topic.name }</span>
+                <span class='text-sm text-neutral-600'>{ placesLabel(topic.count) }</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      { node.groups.length > 0 && (
+        <div class='border-l-2 border-neutral-200 pl-4'>
+          <Astro.self lang={lang} level={level + 1} nodes={node.groups} placesLabel={placesLabel} />
+        </div>
+      )}
+    </li>
+  ))}
+</ul>

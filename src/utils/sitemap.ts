@@ -1,4 +1,5 @@
 import { buildBaseFilters } from '@search/elasticsearch/filters';
+import { fetchTopics, getTopicsConfig } from '@utils/topics';
 import _ from 'underscore';
 
 /**
@@ -44,6 +45,20 @@ export const publicOrigin = (request: Request): string => {
 const locales = (config: any): string[] => {
   const list = config?.i18n?.locales;
   return Array.isArray(list) && list.length ? list : [config?.i18n?.default_locale || 'en'];
+};
+
+/**
+ * The Topics page and each topic's page, when the atlas has topics on;
+ * none if the index can't be read.
+ */
+export const topicUrls = async (origin: string, config: any): Promise<SitemapUrl[]> => {
+  if (!getTopicsConfig(config).enabled) return [];
+
+  const topics = await fetchTopics(config).catch(() => []);
+  return _.flatten(locales(config).map((locale) => [
+    { loc: `${origin}/${locale}/topics` },
+    ...topics.map((topic) => ({ loc: `${origin}/${locale}/topics/${encodeURIComponent(topic.slug)}` }))
+  ]));
 };
 
 /**

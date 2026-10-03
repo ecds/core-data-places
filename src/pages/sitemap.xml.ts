@@ -5,6 +5,7 @@ import {
   pageUrls,
   publicOrigin,
   recordUrls,
+  topicUrls,
   URLS_PER_FILE,
   urlsetXml
 } from '@utils/sitemap';
@@ -25,7 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   const config = getAtlasConfig();
   const origin = publicOrigin(request);
-  const pages = pageUrls(origin, config, getAtlasContent());
+  const pages = [...pageUrls(origin, config, getAtlasContent()), ...await topicUrls(origin, config)];
 
   try {
     const records = await countRecordUrls(config);

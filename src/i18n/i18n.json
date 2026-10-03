@@ -566,5 +566,37 @@
   "openOn": {
     "tinaLabel": "Open the embedded view on its host",
     "defaultValue": "Open on {{provider}}"
+  },
+  "topics": {
+    "tinaLabel": "Topics page title",
+    "defaultValue": "Topics"
+  },
+  "topicCount": {
+    "tinaLabel": "Places in a topic",
+    "defaultValue": "{{count}} places"
+  },
+  "otherTopics": {
+    "tinaLabel": "Topics in no group",
+    "defaultValue": "Other topics"
+  },
+  "noTopics": {
+    "tinaLabel": "No topics yet",
+    "defaultValue": "No topics yet."
+  },
+  "topicsUnavailable": {
+    "tinaLabel": "Topics could not be loaded",
+    "defaultValue": "The topics can’t be shown right now."
+  },
+  "topicOnMap": {
+    "tinaLabel": "Topic: link to the map search",
+    "defaultValue": "See them on the map"
+  },
+  "topicMore": {
+    "tinaLabel": "Topic: more places than listed",
+    "defaultValue": "Showing {{shown}} of {{count}}; see them all on the map."
+  },
+  "topicCountOne": {
+    "tinaLabel": "One place in a topic",
+    "defaultValue": "1 place"
   }
 }

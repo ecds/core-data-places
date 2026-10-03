@@ -1,5 +1,5 @@
 import { getAtlasConfig, getAtlasContent, isAtlasPreview } from '@atlas/server';
-import { pageUrls, publicOrigin, recordUrls, URLS_PER_FILE, urlsetXml } from '@utils/sitemap';
+import { pageUrls, publicOrigin, recordUrls, topicUrls, URLS_PER_FILE, urlsetXml } from '@utils/sitemap';
 import type { APIRoute } from 'astro';
 
 export const prerender = false;
@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ params, request }) => {
   const config = getAtlasConfig();
   const origin = publicOrigin(request);
   const urls = n === 0
-    ? pageUrls(origin, config, getAtlasContent())
+    ? [...pageUrls(origin, config, getAtlasContent()), ...await topicUrls(origin, config)]
     : await recordUrls(origin, config, (n - 1) * URLS_PER_FILE, URLS_PER_FILE);
 
   if (n > 0 && urls.length === 0) {

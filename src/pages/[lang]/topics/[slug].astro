@@ -1,0 +1,75 @@
+---
+import PlaceMap from '@apps/detailPages/PlaceMap';
+import NotFound from '@apps/pages/NotFound.astro';
+import { getAtlasConfig } from '@atlas/server';
+import { getTranslations } from '@backend/i18n';
+import Container from '@components/Container.astro';
+import Layout from '@layouts/Layout.astro';
+import { fetchTopicPlaces, fetchTopics, getTopicsConfig, toFeatureCollection, topicTrail } from '@utils/topics';
+import { setCacheControl } from '@utils/url';
+
+/**
+ * One topic (a category): where it sits in the tree, its places on a map
+ * and as a list, each linking to its page, and the map search filtered to
+ * it. A 404 for an unknown topic, or when topics are off.
+ */
+const lang = Astro.currentLocale as string;
+const { slug } = Astro.params;
+const { t } = await getTranslations(lang);
+const config = getAtlasConfig();
+const topicsConfig = getTopicsConfig(config);
+
+let topic = null;
+let places = [];
+
+if (topicsConfig.enabled) {
+  try {
+    topic = (await fetchTopics(config)).find((candidate) => candidate.slug === slug) || null;
+    places = topic ? await fetchTopicPlaces(config, topic.name) : [];
+  } catch (error) {
+    topic = null;
+  }
+}
+
+if (!topic) {
+  Astro.response.status = 404;
+}
+
+const trail = topic ? topicTrail(topicsConfig.groups, topic.name) || [] : [];
+const geometry = toFeatureCollection(places);
+const search = (config?.search || []).find((entry: any) => !entry.type) || config?.search?.[0];
+const searchHref = search && topic ? `/${lang}/search/${search.name}?types=${encodeURIComponent(topic.name)}` : null;
+setCacheControl(Astro.response.headers);
+---
+<Layout footer title={topic?.name}>
+  { topic ? (
+    <>
+      <div class='bg-primary w-full pb-8 pt-6'>
+        <Container>
+          <nav aria-label={t('topics')} class='pb-4 text-sm'>
+            <a class='underline' href={`/${lang}/topics`}>{ topicsConfig.title || t('topics') }</a>
+            { trail.map((label) => <span> / { label }</span>) }
+          </nav>
+          <h1 class='text-5xl font-header'>{ topic.name }</h1>
+          <p class='pt-3'>{ topic.count === 1 ? t('topicCountOne') : t('topicCount', { count: topic.count }) }</p>
+        </Container>
+      </div>
+      { geometry.features.length > 0 && (
+        <div class='h-[360px] w-full'>
+          <PlaceMap client:only='react' geometry={geometry} lang={lang} />
+        </div>
+      )}
+      <Container className='py-8'>
+        { searchHref && (
+          <p class='pb-6'><a class='underline font-semibold' href={searchHref}>{ t('topicOnMap') }</a></p>
+        )}
+        <ul class='grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3'>
+          { places.map((place) => (
+            <li><a class='underline-offset-2 hover:underline' href={`/${lang}/places/${encodeURIComponent(place.uuid)}`}>{ place.name }</a></li>
+          ))}
+        </ul>
+        { places.length < topic.count && <p class='pt-4 text-sm text-neutral-700'>{ t('topicMore', { shown: places.length, count: topic.count }) }</p> }
+      </Container>
+    </>
+  ) : <NotFound /> }
+</Layout>
