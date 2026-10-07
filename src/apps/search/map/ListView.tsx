@@ -1,3 +1,4 @@
+import ResultsCount from '@apps/search/map/ResultsCount';
 import SearchHighlight from '@apps/search/map/SearchHighlight';
 import SortMenu from '@apps/search/map/SortMenu';
 import useHoverable from '@apps/search/map/useHoverable';
@@ -93,16 +94,20 @@ const ListView = (props: Props) => {
         props.className
       )}
     >
-      { /* Sits at the right end of the list's own "N results" row (40 px). */ }
+      { /*
+        * The list's "N results" row, with the search's true total. SearchList's
+        * own row (its first child, hidden below) counts only the hits loaded
+        * so far.
+        */ }
       <div
-        className='absolute top-0 right-0 z-10 h-10 flex items-center pr-4'
+        className='relative z-10 h-10 shrink-0 flex items-center justify-between pl-6 pr-4 bg-white shadow-sm'
       >
+        <ResultsCount count={nbHits} />
         <SortMenu />
       </div>
       <SearchList
         attributes={attributes}
-        count={nbHits}
-        className='flex flex-col'
+        className='flex flex-col flex-1 min-h-0 [&>div:first-child]:hidden'
         isHighlight={(item) => isHover(item) || isSelected(item)}
         items={hits}
         itemTitle={renderItemTitle}

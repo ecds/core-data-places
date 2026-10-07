@@ -175,6 +175,14 @@
     "tinaLabel": "1 result for <query>",
     "defaultValue": "1 result for {{query}}"
   },
+  "resultsTotal": {
+    "tinaLabel": "<count> results",
+    "defaultValue": "{{count}} results"
+  },
+  "resultsTotalSingular": {
+    "tinaLabel": "1 result",
+    "defaultValue": "1 result"
+  },
   "ofResults": {
     "tinaLabel": "< start >-< end > of < total > result(s)",
     "defaultValue": "{{start}}-{{end}} of {{total}} result(s)"
