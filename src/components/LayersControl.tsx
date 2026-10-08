@@ -50,7 +50,7 @@ const LayersControl = (props: Props) => (
         sideOffset={10}
       >
         { props.baseLayers.length > 1 && (
-          <fieldset className='mb-3'>
+          <fieldset className='mb-3 min-w-0'>
             <legend className='mb-1 font-semibold text-neutral-700'>{ props.labels.baseLayers }</legend>
             { _.map(props.baseLayers, (layer) => (
               <label className='flex cursor-pointer items-center gap-2 py-0.5' key={layer.name}>
@@ -66,7 +66,9 @@ const LayersControl = (props: Props) => (
           </fieldset>
         )}
         { props.overlays.length > 0 && (
-          <fieldset>
+          // min-w-0: a fieldset is as wide as its contents' minimum by default,
+          // and a range input's is wider than this panel leaves it.
+          <fieldset className='min-w-0'>
             <legend className='mb-1 font-semibold text-neutral-700'>{ props.labels.overlays }</legend>
             { _.map(props.overlays, (overlay) => (
               <div className='py-1' key={overlay.name}>
@@ -88,7 +90,7 @@ const LayersControl = (props: Props) => (
                     <input
                       aria-label={`${overlay.name}: ${props.labels.opacity}`}
                       aria-valuetext={`${Math.round(overlay.opacity * 100)}%`}
-                      className='grow accent-current'
+                      className='min-w-0 grow accent-current'
                       max={100}
                       min={0}
                       onChange={(e) => props.onChangeOpacity(overlay.name, Number(e.target.value) / 100)}
@@ -96,7 +98,7 @@ const LayersControl = (props: Props) => (
                       type='range'
                       value={Math.round(overlay.opacity * 100)}
                     />
-                    <span aria-hidden='true' className='w-10 text-right tabular-nums'>{ Math.round(overlay.opacity * 100) }%</span>
+                    <span aria-hidden='true' className='w-10 shrink-0 text-right tabular-nums'>{ Math.round(overlay.opacity * 100) }%</span>
                   </label>
                 )}
               </div>
