@@ -22,12 +22,16 @@
         { "name": "NODE_ENV", "value": "production" },
         { "name": "OG_BASE_DOMAIN", "value": "opengeographies.org" },
         { "name": "OG_CONSOLE_URL", "value": "http://coredata.internal.opengeographies.org" },
+        { "name": "OG_ELASTICSEARCH_URL", "value": "https://<ELASTICSEARCH_HOST>:9200" },
+        { "name": "OG_TILE_SERVER", "value": "https://pmtiles.ecds.io" },
         { "name": "OG_ATLAS_CACHE_TTL_MS", "value": "90000" },
         { "name": "OG_ATLAS_ERROR_TTL_MS", "value": "5000" },
         { "name": "OG_ATLAS_FETCH_TIMEOUT_MS", "value": "5000" },
         { "name": "OG_WORDPRESS_TIMEOUT_MS", "value": "5000" }
       ],
-      "secrets": [],
+      "secrets": [
+        { "name": "OG_ELASTICSEARCH_API_KEY", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:og-renderer/elasticsearch-api-key" }
+      ],
       "healthCheck": {
         "command": [
           "CMD-SHELL",

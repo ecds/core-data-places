@@ -27,14 +27,14 @@ COPY package.json package-lock.json ./
 COPY patches ./patches
 RUN npm ci
 
-# Build the standalone Node SSR server. astro.config selects @astrojs/node when
-# SSR_ADAPTER=node; output defaults to 'server'. We call `astro build` directly
-# rather than the npm "build" script, which runs the retired scripts/build.mjs —
-# `astro build` alone is the proven keystone build.
+# Build the multi-tenant Node SSR server: `npm run build:server` writes the
+# empty label/component defaults a clean checkout lacks (prepare-server.mjs),
+# runs `astro build` with SSR_ADAPTER=node, then precompresses dist/client
+# (Brotli/gzip copies that scripts/serve.mjs serves). Not the npm "build"
+# script, which runs the static-site scripts/build.mjs.
 COPY . .
 ENV NODE_ENV=production
-ENV SSR_ADAPTER=node
-RUN node_modules/.bin/astro build
+RUN npm run build:server
 
 # Slim node_modules now that the build is done — the standalone server loads
 # none of this. The Netlify adapter + CLI exist only for the (unused) Netlify
@@ -66,6 +66,11 @@ ENV PORT=8080
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/scripts/serve.mjs ./scripts/serve.mjs
 
 EXPOSE 8080
-CMD ["node", "./dist/server/entry.mjs"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 8080) + '/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+# scripts/serve.mjs: Astro's handler plus the precompressed /_astro/* copies
+# (Astro's own dist/server/entry.mjs sends everything uncompressed).
+CMD ["node", "./scripts/serve.mjs"]
