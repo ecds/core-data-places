@@ -78,16 +78,8 @@ export const classifyHost = (host: string, baseDomain?: string | null): HostAddr
 
   const labels = hostname.split('.');
 
-  if (hostname.endsWith('.localhost')) {
-    const inner = labels.slice(0, -1);
-
-    if (inner.length === 1) {
-      return slugLabel(inner[0]);
-    }
-
-    return isDomainName(labels) ? { kind: 'domain', domain: hostname } : null;
-  }
-
+  // First, so a base domain under .localhost (atlas.localhost, trying the
+  // self-hosted install on one computer) is read as one.
   const base = baseDomain?.trim().toLowerCase().replace(/\.+$/, '');
   if (base) {
     if (hostname === base) {
@@ -100,6 +92,16 @@ export const classifyHost = (host: string, baseDomain?: string | null): HostAddr
       // connect them as domains.
       return label.includes('.') ? null : slugLabel(label);
     }
+  }
+
+  if (hostname.endsWith('.localhost')) {
+    const inner = labels.slice(0, -1);
+
+    if (inner.length === 1) {
+      return slugLabel(inner[0]);
+    }
+
+    return isDomainName(labels) ? { kind: 'domain', domain: hostname } : null;
   }
 
   return isDomainName(labels) ? { kind: 'domain', domain: hostname } : null;

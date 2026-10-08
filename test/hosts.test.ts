@@ -17,6 +17,15 @@ describe('classifyHost', () => {
     expect(classifyHost('a.b.atlas.example.edu', base)).toBeNull();
   });
 
+  test('a base domain under .localhost is still the base domain', () => {
+    const local = 'atlas.localhost';
+    expect(classifyHost('world-landmarks.atlas.localhost:8080', local)).toEqual({ kind: 'subdomain', slug: 'world-landmarks' });
+    expect(classifyHost('atlas.localhost:8080', local)).toBeNull();
+    expect(classifyHost('a.b.atlas.localhost', local)).toBeNull();
+    expect(classifyHost('hrcga3.localhost:4321', local)).toEqual({ kind: 'subdomain', slug: 'hrcga3' });
+    expect(classifyHost('savannah.test.localhost', local)).toEqual({ kind: 'domain', domain: 'savannah.test.localhost' });
+  });
+
   test('a one-label .localhost name is a slug; deeper ones are domains', () => {
     expect(classifyHost('hrcga3.localhost:4321')).toEqual({ kind: 'subdomain', slug: 'hrcga3' });
     expect(classifyHost('savannah.test.localhost:4321')).toEqual({ kind: 'domain', domain: 'savannah.test.localhost' });
