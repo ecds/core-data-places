@@ -288,9 +288,7 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
    * moves the map to it. Cleared when the panel closes.
    */
   useEffect(() => {
-    setSelectedPlace(geometryData
-      ? { geometry: geometryData.geometry, animate: !geometryData.properties?.certainty_radius }
-      : null);
+    setSelectedPlace(geometryData ? { geometry: geometryData.geometry } : null);
   }, [geometryData]);
 
   useEffect(() => () => setSelectedPlace(null), []);

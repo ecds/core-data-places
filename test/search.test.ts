@@ -7,6 +7,8 @@ import {
   humanize,
   isInverse,
   isRelatedRecord,
+  featureId,
+  withFeatureIds,
   withGeometry
 } from '@utils/search';
 import { describe, expect, test } from 'vitest';
@@ -161,3 +163,38 @@ describe('getConfiguredFacetLabel', () => {
     expect(getConfiguredFacetLabel(undefined, 'types')).toBeUndefined();
   });
 });
+
+describe('featureId', () => {
+  test('a UUID that starts with a letter still gets an integer id', () => {
+    // parseInt('af219adc-…', 10) is NaN: MapLibre drops the id and hover never finds the point.
+    const id = featureId('af219adc-aef5-4326-8cc7-0aa0b1b56319');
+    expect(Number.isSafeInteger(id)).toBe(true);
+    expect(id).toBe(parseInt('af219adcaef5', 16));
+  });
+
+  test('UUIDs that parseInt would collapse to the same number stay distinct', () => {
+    // parseInt gives 4 for both.
+    expect(featureId('4f8e6c3b-7474-4486-a93f-a44aef82c367')).not.toBe(featureId('4a1b2c3d-0000-4000-8000-000000000000'));
+  });
+
+  test('stable for a UUID, undefined for anything else', () => {
+    const uuid = '1774167e-737e-4442-ba09-713f6a000261';
+    expect(featureId(uuid)).toBe(featureId(uuid));
+    expect(featureId(undefined)).toBeUndefined();
+    expect(featureId('not-a-uuid')).toBeUndefined();
+  });
+});
+
+describe('withFeatureIds', () => {
+  test('sets each feature id from its UUID and keeps the rest', () => {
+    const features = [
+      { type: 'Feature', id: NaN, properties: { uuid: 'd46c7a8f-d161-4f62-8ad9-b36ccfa9349c', name: 'New Hebron Baptist' }, geometry: null },
+      { type: 'Feature', id: 7, properties: { name: 'no uuid' }, geometry: null }
+    ];
+    const [first, second] = withFeatureIds(features);
+    expect(first.id).toBe(parseInt('d46c7a8fd161', 16));
+    expect(first.properties.name).toBe('New Hebron Baptist');
+    expect(second).toBe(features[1]);
+  });
+});
+

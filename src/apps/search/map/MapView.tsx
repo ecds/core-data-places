@@ -174,6 +174,20 @@ const ViewportRefinement = () => {
 };
 
 /**
+ * The open record's point: still, larger than the results' and in the same
+ * yellow as a selected boundary, so it stands out without pulsing.
+ */
+const SELECTED_POINT = {
+  type: 'circle',
+  paint: {
+    'circle-radius': 8,
+    'circle-color': '#ffd546',
+    'circle-stroke-width': 2,
+    'circle-stroke-color': '#8d260c'
+  }
+};
+
+/**
  * Draws the place of the record whose panel is open and moves the map to it
  * (unless the atlas turned `zoom_to_place` off): a boundary or route fitted
  * to its extent, a point centred at street level, both clear of the result
@@ -204,7 +218,6 @@ const SelectedPlace = () => {
 
   return (
     <LocationMarkers
-      animate={selectedPlace.animate}
       data={selectedPlace.geometry}
       fillStyle={{
         type: 'fill',
@@ -215,6 +228,7 @@ const SelectedPlace = () => {
       }}
       fitBoundingBox={false}
       layerId='current'
+      pointStyle={SELECTED_POINT}
     />
   );
 };

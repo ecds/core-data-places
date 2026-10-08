@@ -378,3 +378,32 @@ export const withGeometry = (hit, geometryPath = 'geometry') => {
 
   return { ...hit, [geometryPath]: geometry };
 };
+
+/**
+ * A map feature's id, from its record's UUID. MapLibre keeps only integer ids,
+ * and core-data's `MapUtils.toFeature` uses `parseInt(record_id)`, but a v1
+ * document's `record_id` is the record's UUID: "af21…" gives NaN, so the point
+ * has no id and hovering it shows nothing (6 UUIDs in 16 start with a letter),
+ * and "4f8e…" gives 4, so ids collide. The UUID's first 12 hex digits (48
+ * random bits) make an integer that's stable and, for an atlas's places,
+ * unique.
+ *
+ * @param uuid
+ */
+export const featureId = (uuid?: string): number | undefined => {
+  const hex = typeof uuid === 'string' ? uuid.replace(/-/g, '').slice(0, 12) : '';
+
+  return /^[0-9a-f]{12}$/i.test(hex) ? parseInt(hex, 16) : undefined;
+};
+
+/**
+ * The passed map features, each with the id `featureId` gives its UUID (a
+ * feature without a UUID keeps its own).
+ *
+ * @param features
+ */
+export const withFeatureIds = (features) => _.map(features, (feature) => {
+  const id = featureId(feature?.properties?.uuid);
+
+  return id === undefined ? feature : { ...feature, id };
+});
