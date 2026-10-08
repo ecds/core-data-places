@@ -2,6 +2,8 @@ import { useLoadedMap } from '@peripleo/maplibre';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { useEffect, useRef } from 'react';
+import { absoluteTiles, tileUrlKind, vectorLayerIds } from '@utils/tiles';
+import { defaultStyles, stylesForLayers } from '@utils/tileStyles';
 
 /**
  * The pmtiles:// protocol only needs to be registered with MapLibre once per
@@ -31,15 +33,16 @@ interface Props {
   /**
    * (Optional) array of MapLibre layer definitions (without `source`, which is
    * filled in). Use `source-layer` to address the tile layers (the
-   * build.tiles.mjs script produces "features" and "labels"). When omitted, a
-   * default fill/line/circle/symbol style is applied.
+   * build.tiles.mjs script produces "features" and "labels"). When omitted,
+   * a style is chosen from the tile set's layers (utils/tileStyles.ts).
    */
   styles?: any[],
 
   /**
-   * URL of the .pmtiles archive, or a {z}/{x}/{y} tile URL template (as
-   * produced by `npm run build:tiles -- --dir`). Relative URLs are resolved
-   * against the site origin.
+   * URL of the .pmtiles archive, a TileJSON document (.json; e.g. ECDS's
+   * tile server, or the atlas's /map-tiles proxy of it), or a {z}/{x}/{y}
+   * tile URL template (as produced by `npm run build:tiles -- --dir`).
+   * Relative URLs are resolved against the site origin.
    */
   url: string,
 
@@ -77,56 +80,6 @@ const scaledPaint = (style: any, opacity: number) => {
   return paint;
 };
 
-const DEFAULT_COLOR = '#BC2635';
-
-const defaultStyles = (labelField: string) => [{
-  id: 'fill',
-  type: 'fill',
-  'source-layer': 'features',
-  paint: {
-    'fill-color': DEFAULT_COLOR,
-    'fill-opacity': 0.06
-  },
-  filter: ['==', ['geometry-type'], 'Polygon']
-}, {
-  id: 'line',
-  type: 'line',
-  'source-layer': 'features',
-  paint: {
-    'line-color': DEFAULT_COLOR,
-    'line-opacity': 0.3,
-    'line-width': 0.75
-  },
-  filter: ['==', ['geometry-type'], 'Polygon']
-}, {
-  id: 'circle',
-  type: 'circle',
-  'source-layer': 'labels',
-  paint: {
-    'circle-color': DEFAULT_COLOR,
-    'circle-opacity': 0.7,
-    'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 1, 12, 2.5, 15, 4]
-  }
-}, {
-  id: 'label',
-  type: 'symbol',
-  'source-layer': 'labels',
-  minzoom: 14,
-  layout: {
-    'text-field': ['get', labelField],
-    'text-font': ['Open Sans Regular'],
-    'text-size': 11,
-    'text-anchor': 'top',
-    'text-offset': [0, 0.5],
-    'text-optional': true
-  },
-  paint: {
-    'text-color': '#333333',
-    'text-halo-color': '#ffffff',
-    'text-halo-width': 1
-  }
-}];
-
 /**
  * Renders a self-hosted PMTiles vector tile overlay. Tiles can be generated
  * from the project's Core Data geometries with `npm run build:tiles` — the
@@ -139,37 +92,50 @@ const PMTilesLayer = (props: Props) => {
   // Read when layers are (re)added, so they start at the current opacity.
   const opacityRef = useRef(opacity);
   opacityRef.current = opacity;
+  // The styles drawn (a TileJSON's are chosen once it has loaded).
+  const stylesRef = useRef<any[]>(props.styles || defaultStyles(props.labelField || 'name'));
 
   useEffect(() => {
     if (!map) {
       return undefined;
     }
     const url = new URL(props.url, window.location.origin).toString();
-    const isArchive = url.endsWith('.pmtiles');
+    const kind = tileUrlKind(url);
+    const sourceId = props.id;
+    const labelField = props.labelField || 'name';
+    let cancelled = false;
+    let source: any = null;
+    let styles: any[] = props.styles || defaultStyles(labelField);
+    let layerIds: string[] = [];
 
     // {z}/{x}/{y} template URLs use a plain vector source. .pmtiles archives
     // need the pmtiles:// protocol, registered on the maplibre-gl module.
     // (Note: the protocol registry is module-global, so the bundler must
     // resolve a single maplibre-gl copy — see `resolve.dedupe` in
-    // astro.config.mjs. Template URLs avoid the issue entirely.)
-    if (isArchive) {
+    // astro.config.mjs. Template URLs avoid the issue entirely.) A TileJSON
+    // is read first: its tiles (made absolute; the /map-tiles proxy answers
+    // with root-relative ones), zoom range and bounds make the source, and
+    // its layer names choose the styles.
+    if (kind === 'archive') {
       registerProtocol();
-    }
-
-    const source = isArchive
-      ? { type: 'vector', url: `pmtiles://${url}` }
-      : {
+      source = { type: 'vector', url: `pmtiles://${url}` };
+    } else if (kind === 'template') {
+      source = {
         type: 'vector',
         tiles: [decodeURI(url)],
         minzoom: props.minzoom ?? 6,
         maxzoom: props.maxzoom ?? 15
       };
-
-    const sourceId = props.id;
-    const styles = props.styles || defaultStyles(props.labelField || 'name');
-    const layerIds = styles.map((style) => `${sourceId}-${style.id}`);
+    }
 
     const addLayers = () => {
+      if (!source) {
+        return;
+      }
+
+      layerIds = styles.map((style) => `${sourceId}-${style.id}`);
+      stylesRef.current = styles;
+
       try {
         if (!map.getSource(sourceId)) {
           map.addSource(sourceId, source);
@@ -192,12 +158,34 @@ const PMTilesLayer = (props: Props) => {
       }
     };
 
-    addLayers();
+    if (kind === 'tilejson') {
+      fetch(url)
+        .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`TileJSON ${response.status}`))))
+        .then((doc) => {
+          if (cancelled) {
+            return;
+          }
+
+          source = {
+            type: 'vector',
+            tiles: absoluteTiles(doc.tiles, url),
+            minzoom: doc.minzoom ?? 0,
+            maxzoom: doc.maxzoom ?? 14,
+            ...(Array.isArray(doc.bounds) ? { bounds: doc.bounds } : {}),
+            ...(doc.attribution ? { attribution: doc.attribution } : {})
+          };
+          styles = props.styles || stylesForLayers(vectorLayerIds(doc), labelField);
+          addLayers();
+        })
+        .catch((error) => console.error('PMTilesLayer: failed to read the TileJSON', error));
+    } else {
+      addLayers();
+    }
 
     // A base layer style change (`setStyle`) wipes all custom sources/layers;
     // re-add them whenever the style settles without our layers present.
     const onStyleData = () => {
-      if (!map.getLayer(layerIds[0])) {
+      if (layerIds.length && !map.getLayer(layerIds[0])) {
         addLayers();
       }
     };
@@ -205,6 +193,7 @@ const PMTilesLayer = (props: Props) => {
     map.on('styledata', onStyleData);
 
     return () => {
+      cancelled = true;
       map.off('styledata', onStyleData);
 
       try {
@@ -224,8 +213,7 @@ const PMTilesLayer = (props: Props) => {
   useEffect(() => {
     if (!map) return;
 
-    const styles = props.styles || defaultStyles(props.labelField || 'name');
-    styles.forEach((style) => {
+    stylesRef.current.forEach((style) => {
       const layerId = `${props.id}-${style.id}`;
       if (!map.getLayer(layerId)) return;
 
