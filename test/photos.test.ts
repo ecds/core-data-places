@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getHitThumbnail, getPhotoField, getPhotoUrl } from '../src/utils/photos';
+import { getHitThumbnail, getIiifOriginal, getPhotoField, getPhotoUrl } from '../src/utils/photos';
 
 const PHOTO = 'https://tile.loc.gov/storage-services/service/pnp/habshaer/ga/ga0100/ga0141/photos/056098pv.jpg';
 
@@ -36,6 +36,24 @@ describe('photos', () => {
     expect(getPhotoUrl(record, 'missing')).toBeNull();
     expect(getPhotoUrl(record, 'bad')).toBeNull();
     expect(getPhotoUrl({}, 'photo')).toBeNull();
+  });
+});
+
+describe('getIiifOriginal', () => {
+  const base = 'https://iiif-cloud.ecds.io/public/resources/59f0fb47-2554-40fd-b001-134de1eb3b3c';
+
+  it('gives the original of an IIIF Cloud thumbnail or preview', () => {
+    expect(getIiifOriginal(`${base}/thumbnail`)).toBe(`${base}/inline`);
+    expect(getIiifOriginal(`${base}/preview`)).toBe(`${base}/inline`);
+    expect(getIiifOriginal(`${base}/preview?v=2`)).toBe(`${base}/inline`);
+  });
+
+  it('is null for the original itself, other IIIF addresses and anything else', () => {
+    expect(getIiifOriginal(`${base}/inline`)).toBeNull();
+    expect(getIiifOriginal(`${base}/iiif`)).toBeNull();
+    expect(getIiifOriginal(`${base}/thumbnails`)).toBeNull();
+    expect(getIiifOriginal('https://example.org/photo.jpg')).toBeNull();
+    expect(getIiifOriginal(null)).toBeNull();
   });
 });
 

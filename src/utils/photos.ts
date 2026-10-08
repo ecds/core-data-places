@@ -47,6 +47,21 @@ export const getPhotoUrl = (record: any, field: string | null | undefined, asset
   return /^https?:\/\//i.test(url) && isSafeUrl(url, 'img') ? url : null;
 };
 
+// An IIIF Cloud sized copy: /public/resources/<uuid>/thumbnail or /preview.
+const IIIF_SIZED = /^(https?:\/\/[^?#]+\/public\/resources\/[^/?#]+)\/(?:thumbnail|preview)(?=$|[?#])/i;
+
+/**
+ * The original of an IIIF Cloud sized copy, to show when the copy fails to
+ * load: the image server won't enlarge, so a photo smaller than the size
+ * asked for (250 px for a thumbnail, 500 px for a preview) has no copy at
+ * all, and a photo uploaded seconds ago has none yet. Null for any other
+ * address.
+ */
+export const getIiifOriginal = (url?: string | null): string | null => {
+  const match = typeof url === 'string' ? url.match(IIIF_SIZED) : null;
+  return match ? `${match[1]}/inline` : null;
+};
+
 const first = (value: any) => (Array.isArray(value) ? value[0] : value);
 
 const thumbnailOf = (media: any): string | null => {

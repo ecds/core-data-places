@@ -29,7 +29,7 @@ import PanelHistoryContext from '@apps/search/map/PanelHistoryContext';
 import { useSearchConfig } from '@apps/search/SearchConfigContext';
 import { useRuntimeConfig } from '@peripleo/peripleo';
 import { omitExcluded } from '@utils/exclusions';
-import { getPhotoUrl } from '@utils/photos';
+import { getIiifOriginal, getPhotoUrl } from '@utils/photos';
 
 // The IIIF viewer loads when a visitor opens the place's gallery (see
 // @components/MediaGallery), and the media thumbnails (Clover's, which bring
@@ -221,6 +221,34 @@ const { data: { people = [] } = {}, loading: peopleLoading } = useLoader(onLoadP
       return getPhotoUrl(data?.[props.name], props.photoField, assetBase)
     })
   }, [item, mediaContentsLoading])
+
+  /**
+   * Swaps an IIIF preview that can't be loaded for its original (a photo
+   * smaller than the preview size has no preview; see getIiifOriginal). The
+   * panel's image element isn't ours, so the preview is tried here first.
+   */
+  useEffect(() => {
+    const original = getIiifOriginal(coverUrl);
+
+    if (!original) {
+      return undefined;
+    }
+
+    let current = true;
+    const probe = new Image();
+
+    probe.onerror = () => {
+      if (current) {
+        setCoverUrl((url) => (url === coverUrl ? original : url));
+      }
+    };
+    probe.src = coverUrl;
+
+    return () => {
+      current = false;
+      probe.onerror = null;
+    };
+  }, [coverUrl]);
   
   /**
    * Memo-izes the geometry.

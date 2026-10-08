@@ -6,7 +6,7 @@ import useSelectable from '@apps/search/map/useSelectable';
 import { SearchList, useCachedHits } from '@performant-software/core-data';
 import { useNavigate } from '@peripleo/peripleo';
 import { useStats } from 'react-instantsearch';
-import { getHitThumbnail } from '@utils/photos';
+import { getHitThumbnail, getIiifOriginal } from '@utils/photos';
 import { getAttributes, getHitDisplayValue } from '@utils/search';
 import clsx from 'clsx';
 import { useCallback, useMemo } from 'react';
@@ -74,6 +74,14 @@ const ListView = (props: Props) => {
           className='w-14 h-14 shrink-0 rounded-sm object-cover bg-neutral-200'
           decoding='async'
           loading='lazy'
+          onError={(event) => {
+            // A photo too small for an IIIF thumbnail has none: show the original.
+            const original = getIiifOriginal(thumbnail);
+
+            if (original && event.currentTarget.src !== original) {
+              event.currentTarget.src = original;
+            }
+          }}
           src={thumbnail}
         />
         { title }
