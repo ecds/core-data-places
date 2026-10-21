@@ -202,8 +202,9 @@ describe('result_filtering', () => {
 });
 
 describe('search', () => {
-  test('is not empty', () => {
-    expect(config.search).toBeArray();
+  // Empty in the defaults: each atlas's searches come from the console.
+  test('is an array', () => {
+    expect(config.search).toBeInstanceOf(Array);
   });
 
   describe.each(config.search)('checking searches', (search) => {
