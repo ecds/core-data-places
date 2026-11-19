@@ -8,41 +8,44 @@ read from the environment on the server and never sent to the browser (searches
 go through the renderer's own `/api/search.json`, which adds each atlas's project
 filter).
 
-> ⚠️ **Unvalidated against AWS.** These templates were authored and statically
-> validated (JSON/YAML parse, `docker build` of the image) but **not** applied to a
-> live AWS account. Treat ARNs, account IDs, regions, cluster/service names, and
-> subnet/SG IDs as placeholders to fill in. See the parent repo's
-> `deploy-templates/` for the shared infra (ECR, ALB, ACM wildcard, Route 53) and
-> the full env-var reference, and `EMORY_HANDOFF.md` for the deploy plan (WS2).
+> ⚠️ **Unvalidated against AWS.** The stack passes `cfn-lint` and the image builds,
+> but neither has been applied to a live AWS account.
 
 ## Files
 
 | File | What |
 |---|---|
 | `../Dockerfile` | Multi-stage build, `node:24-bookworm-slim`: `npm ci`, `npm run build:server` (SSR build + precompressed assets), then `scripts/serve.mjs` on `:8080`, which serves the Brotli/gzip copies of `/_astro/*`. Container `HEALTHCHECK` on `/health`. |
-| `ecs-task-def.renderer.json` | ECS Fargate task definition. Port 8080, `/health` node-based container healthcheck, env plus one secret (the Elasticsearch API key). |
-| `../.github/workflows/deploy-renderer.yml` | `workflow_dispatch`-only deploy: build → push ECR → render task def → deploy ECS. Environment-gated (`staging`/`production`). |
+| `og-renderer.cfn.json` | CloudFormation stack, after ECDS's FairData template: execution and task roles, log group, target group (`GET /health`), a host-header listener rule, task definition and Fargate service with ECS Exec and circuit-breaker rollback. |
+| `../.github/workflows/deploy-renderer.yml` | On push to `main`: tests, then build, push `og-renderer:stable` to ECR and force a new deployment of the `og-renderer` service. |
 
-## Wiring it up (Emory)
+## Wiring it up (ECDS)
 
-1. Create ECR repo `og-renderer` and an ECS cluster + service behind the wildcard
-   ALB (see `deploy-templates/`).
-2. In repo **Settings → Environments**, create `staging` and `production`
-   (add required reviewers on `production`). Per environment set repo **variables**:
-   `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN` (OIDC), `ECR_REPOSITORY=og-renderer`,
-   `ECS_CLUSTER`, `ECS_SERVICE`.
-3. **Settings → Actions → run "Deploy renderer"**, pick the environment.
+1. Create the ECR repository `og-renderer` and the renderer's secret (the read-only
+   Elasticsearch key) in Secrets Manager.
+2. Create the stack from `og-renderer.cfn.json` with `DockerImageVersion=stable`. Its
+   parameters include the ECR image URI, the VPC, subnets and security groups, the
+   shared ALB's HTTPS listener and a free rule priority, and the secret's full ARN.
+3. Add the repository secrets `AWS_ROLE` (the GitHub OIDC deploy role) and
+   `ECR_REGISTRY`. Until both exist, the workflow runs the tests and skips the deploy.
 
-## Key env vars (see `ecs-task-def.renderer.json`)
+The stack owns the task definition: change settings by updating the stack, not
+in the console. A deploy only pushes the image tag and restarts the service.
+
+A dev service (`og-renderer-dev`, tag `latest`, from a `develop` branch) can be
+added later as a second stack. It needs its own domain and certificate, since
+`*.opengeographies.org` doesn't cover `*.dev.opengeographies.org`.
+
+## Key env vars (set by the stack)
 
 - `OG_BASE_DOMAIN` — apex domain; the middleware strips it to derive the slug. **Required.**
-- `OG_CONSOLE_URL` — **internal** Core Data URL (private ALB / service-discovery
-  name). The server-side bundle fetch sends this as its `Host` header. **Required.**
+- `OG_CONSOLE_URL` — the Core Data console as the renderer reaches it. The server-side
+  bundle fetch sends this as its `Host` header. **Required.**
 - `OG_ELASTICSEARCH_URL` — the search index. **Required**: without it every search answers
   503 "Search is not configured".
-- `OG_ELASTICSEARCH_API_KEY` — **secret** (Secrets Manager / SSM). A **read-only** key limited
-  to the Open Geographies indices (`open_geographies_v1`, and `open_geographies_v1_project_*`
-  once each atlas has its own index).
+- `OG_ELASTICSEARCH_API_KEY` — **secret** (Secrets Manager). A **read-only** key covering
+  `open_geographies_v1*`, so it includes each atlas's own index
+  (`open_geographies_v1_project_<id>`).
 - `OG_TILE_SERVER` — optional: a vector tile server atlases load through their own address
   (`/map-tiles/<name>.json`). ECDS's is `https://pmtiles.ecds.io`.
 - `OG_ATLAS_CACHE_TTL_MS` — bundle cache TTL; tune up to 60–120 s in prod to cut console load.
