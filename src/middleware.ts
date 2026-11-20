@@ -119,7 +119,7 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => ({ '&': '
  * Never cached by browsers or a CDN, so a newly published atlas appears as
  * soon as the renderer's own bundle cache (30 s) refreshes.
  */
-const notFound = (url: URL, hadPreview: boolean): Response => {
+const notFound = (request: Request, url: URL, hadPreview: boolean): Response => {
   if (url.pathname.startsWith('/api/') || url.pathname.endsWith('.json')) {
     return new Response(JSON.stringify({ error: 'No atlas at this address.' }), {
       status: 404,
@@ -134,7 +134,7 @@ const notFound = (url: URL, hadPreview: boolean): Response => {
   const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex"><title>No atlas here</title>
 <style>body{font-family:system-ui,sans-serif;margin:0;padding:15vh 24px;color:#111827;background:#fff}main{max-width:36rem;margin:0 auto}h1{font-size:1.75rem;margin:0 0 1rem}p{line-height:1.6;color:#374151}</style>
-</head><body><main><h1>There’s no atlas at this address</h1><p>${escapeHtml(url.host)} doesn’t have a published atlas. Check the address, or the atlas may not be published yet.</p>${note}</main></body></html>`;
+</head><body><main><h1>There’s no atlas at this address</h1><p>${escapeHtml(hostnameOf(request.headers.get('host') ?? url.host) ?? url.host)} doesn’t have a published atlas. Check the address, or the atlas may not be published yet.</p>${note}</main></body></html>`;
 
   return new Response(body, { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': NO_STORE } });
 };
@@ -162,7 +162,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const address = resolveAddress(request, url);
   if (!address) {
-    return notFound(url, false);
+    return notFound(request, url, false);
   }
 
   const bundle = await resolveBundle(address, offeredToken ?? cookieToken);
@@ -209,7 +209,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (bundle.missing) {
-    return notFound(url, !!cookieToken);
+    return notFound(request, url, !!cookieToken);
   }
 
   // A language the renderer routes but this atlas isn't in (/fr/… on an
