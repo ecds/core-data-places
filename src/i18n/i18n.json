@@ -135,6 +135,10 @@
     "tinaLabel": "No historic map",
     "defaultValue": "None"
   },
+  "mapUnavailable": {
+    "tinaLabel": "Map unavailable",
+    "defaultValue": "This browser can't show the map, usually because hardware acceleration is turned off in its settings. Search and records still work."
+  },
   "aboutProject": {
     "tinaLabel": "About the Project",
     "defaultValue": "About the Project"

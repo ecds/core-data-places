@@ -13,8 +13,10 @@ import defaults from '@config' with { type: 'json' };
 import { resolveAssetPath } from '@utils/images';
 import { getDatedLayers, getInitialMapYear, getLayersForYear, getMapYears } from '@utils/mapYears';
 import { hasOpacity, opacityOf } from '@utils/overlays';
+import { supportsWebGL } from '@utils/webgl';
 import ImageOverlayLayer from './ImageOverlayLayer';
 import LayersControl from './LayersControl';
+import { MapErrorBoundary, MapUnavailable } from './MapUnavailable';
 import MapYearControl from './MapYearControl';
 import OverlayOpacity from './OverlayOpacity';
 import PMTilesLayer from './PMTilesLayer';
@@ -205,6 +207,14 @@ const Map = (props: Props) => {
     'hover:opacity-90'
   ].join(' '), []);
 
+  // Without WebGL2 (hardware acceleration off), MapLibre can't start and its
+  // error would unmount the whole page: show a notice in the map's place.
+  const canDraw = useMemo(() => supportsWebGL(), []);
+
+  if (!canDraw) {
+    return <MapUnavailable className={props.classNames?.root} />;
+  }
+
   // Each BaseMap gets its own MapProvider. Peripleo ships a single shared
   // `MapContext` at the app root, so when a post body contains more than one
   // map (e.g. a `<place>` block and a `<map>` block), each PeripleoMap mount
@@ -212,83 +222,85 @@ const Map = (props: Props) => {
   // the wrong instance for the earlier subtree. Isolating the context per
   // BaseMap avoids the cross-contamination.
   return (
-    <MapProvider>
-      <PeripleoMap
-        attributionControl={false}
-        className={clsx('grow', props.classNames?.root)}
-        style={PeripleoUtils.toLayerStyle(baseLayer, baseLayer.name)}
-      >
-        <div
-          className={clsx('absolute top-0 right-0 flex flex-col py-3 px-3 gap-y-2', props.classNames?.controls)}
+    <MapErrorBoundary className={props.classNames?.root}>
+      <MapProvider>
+        <PeripleoMap
+          attributionControl={false}
+          className={clsx('grow', props.classNames?.root)}
+          style={PeripleoUtils.toLayerStyle(baseLayer, baseLayer.name)}
         >
-          <ZoomControl
-            zoomIn={<Icon name='zoom_in' />}
-            zoomInProps={{ className: buttonClass }}
-            zoomOut={<Icon name='zoom_out' />}
-            zoomOutProps={{ className: buttonClass }}
-          />
-          { (baseLayers.length > 1 || controlOverlays.length > 0) && (
-            <LayersControl
-              baseLayer={baseLayer?.name}
-              baseLayers={baseLayers}
-              className={buttonClass}
-              labels={{ button: t('mapLayers'), baseLayers: t('baseLayers'), overlays: t('overlays'), opacity: t('opacity') }}
-              onChangeBaseLayer={(name) => setBaseLayer(_.findWhere(baseLayers, { name }))}
-              onChangeOpacity={(name, value) => setOpacities((current) => ({ ...current, [name]: value }))}
-              onToggleOverlay={onToggleOverlay}
-              overlays={controlOverlays}
+          <div
+            className={clsx('absolute top-0 right-0 flex flex-col py-3 px-3 gap-y-2', props.classNames?.controls)}
+          >
+            <ZoomControl
+              zoomIn={<Icon name='zoom_in' />}
+              zoomInProps={{ className: buttonClass }}
+              zoomOut={<Icon name='zoom_out' />}
+              zoomOutProps={{ className: buttonClass }}
             />
-          )}
-          { yearSlider && (
-            <MapYearControl
-              label={t('mapYear')}
-              noneLabel={t('mapYearNone')}
-              onChange={setMapYear}
-              value={mapYear}
-              years={mapYears}
+            { (baseLayers.length > 1 || controlOverlays.length > 0) && (
+              <LayersControl
+                baseLayer={baseLayer?.name}
+                baseLayers={baseLayers}
+                className={buttonClass}
+                labels={{ button: t('mapLayers'), baseLayers: t('baseLayers'), overlays: t('overlays'), opacity: t('opacity') }}
+                onChangeBaseLayer={(name) => setBaseLayer(_.findWhere(baseLayers, { name }))}
+                onChangeOpacity={(name, value) => setOpacities((current) => ({ ...current, [name]: value }))}
+                onToggleOverlay={onToggleOverlay}
+                overlays={controlOverlays}
+              />
+            )}
+            { yearSlider && (
+              <MapYearControl
+                label={t('mapYear')}
+                noneLabel={t('mapYearNone')}
+                onChange={setMapYear}
+                value={mapYear}
+                years={mapYears}
+              />
+            )}
+          </div>
+          <WhenStyleLoaded>
+            { /* One per overlay, keyed by name: core-data's OverlayLayers keys by
+                position, and its georeferenced-map layer is added only on mount,
+                so a different map in the same position (the year slider) must
+                remount rather than update. */ }
+            { _.filter(visibleOverlays, (overlay: any) => !['pmtiles', 'image'].includes(overlay.layer_type)).map((overlay: any) => (
+              <OverlayLayers
+                key={overlay.name}
+                overlays={[overlay]}
+              />
+            ))}
+            { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type === 'pmtiles').map((overlay: any) => (
+              <PMTilesLayer
+                id={overlay.name}
+                key={overlay.name}
+                labelField={overlay.label_field}
+                opacity={overlay.opacity}
+                styles={overlay.styles}
+                url={overlay.url}
+              />
+            ))}
+            { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type === 'image').map((overlay: any) => (
+              <ImageOverlayLayer
+                coordinates={overlay.coordinates}
+                id={overlay.name}
+                key={overlay.name}
+                opacity={overlay.opacity}
+                url={resolveAssetPath(overlay.url, assetBase) as string}
+              />
+            ))}
+            <OverlayOpacity
+              overlays={visibleOverlays}
             />
-          )}
-        </div>
-        <WhenStyleLoaded>
-          { /* One per overlay, keyed by name: core-data's OverlayLayers keys by
-              position, and its georeferenced-map layer is added only on mount,
-              so a different map in the same position (the year slider) must
-              remount rather than update. */ }
-          { _.filter(visibleOverlays, (overlay: any) => !['pmtiles', 'image'].includes(overlay.layer_type)).map((overlay: any) => (
-            <OverlayLayers
-              key={overlay.name}
-              overlays={[overlay]}
+            { props.children }
+            <KeepOverlaysBelowData
+              names={_.pluck(visibleOverlays, 'name')}
             />
-          ))}
-          { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type === 'pmtiles').map((overlay: any) => (
-            <PMTilesLayer
-              id={overlay.name}
-              key={overlay.name}
-              labelField={overlay.label_field}
-              opacity={overlay.opacity}
-              styles={overlay.styles}
-              url={overlay.url}
-            />
-          ))}
-          { _.filter(visibleOverlays, (overlay: any) => overlay.layer_type === 'image').map((overlay: any) => (
-            <ImageOverlayLayer
-              coordinates={overlay.coordinates}
-              id={overlay.name}
-              key={overlay.name}
-              opacity={overlay.opacity}
-              url={resolveAssetPath(overlay.url, assetBase) as string}
-            />
-          ))}
-          <OverlayOpacity
-            overlays={visibleOverlays}
-          />
-          { props.children }
-          <KeepOverlaysBelowData
-            names={_.pluck(visibleOverlays, 'name')}
-          />
-        </WhenStyleLoaded>
-      </PeripleoMap>
-    </MapProvider>
+          </WhenStyleLoaded>
+        </PeripleoMap>
+      </MapProvider>
+    </MapErrorBoundary>
   );
 };
 
