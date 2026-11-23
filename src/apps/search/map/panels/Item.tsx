@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { recordPath } from '@utils/recordPath';
 import { getExclusions } from '@utils/exclusions';
 import ItemsService from '@backend/api/coreData/items';
 import TranslationContext from '@contexts/TranslationContext';
@@ -19,7 +20,7 @@ const Item = (props: Props) => {
    */
   const resolveDetailPageUrl = useCallback((item) => {
     if (item && hasDetailPage('items', config)) {
-      return `/${lang}/items/${item.uuid}`;
+      return recordPath(lang, 'items', item);
     }
   }, [lang]);
 

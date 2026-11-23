@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { recordPath } from '@utils/recordPath';
 import { getExclusions } from '@utils/exclusions';
 import EventsService from '@backend/api/coreData/events';
 import TranslationContext from '@contexts/TranslationContext';
@@ -52,7 +53,7 @@ const Event = (props: Props) => {
    */
   const resolveDetailPageUrl = useCallback((event) => {
     if (event && hasDetailPage('events', config)) {
-      return `/${lang}/events/${event.uuid}`;
+      return recordPath(lang, 'events', event);
     }
   }, [lang]);
 

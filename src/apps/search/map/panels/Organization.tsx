@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { recordPath } from '@utils/recordPath';
 import { getExclusions } from '@utils/exclusions';
 import OrganizationsService from '@backend/api/coreData/organizations';
 import TranslationContext from '@contexts/TranslationContext';
@@ -19,7 +20,7 @@ const Organization = (props: Props) => {
    */
   const resolveDetailPageUrl = useCallback((organization) => {
     if (organization && hasDetailPage('organizations', config)) {
-      return `/${lang}/organizations/${organization.uuid}`;
+      return recordPath(lang, 'organizations', organization);
     }
   }, [lang]);
 

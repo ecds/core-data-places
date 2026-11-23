@@ -2,6 +2,8 @@ import { buildBaseFilters } from '@search/elasticsearch/filters';
 import { connection, indexName, MODEL_TYPES, searchIndex, searchModelIds } from '@utils/recordIndex';
 import _ from 'underscore';
 
+export { recordPath } from '@utils/recordPath';
+
 /**
  * Record pages live at their slug (`/en/places/mizpah-methodist-effingham`),
  * the friendly address the indexing engine gives every record. A record's
@@ -36,16 +38,65 @@ export type RecordAddress =
   | { kind: 'unavailable' }
   | { kind: 'missing' };
 
-/**
- * A record page's address, `/<lang>/<model>/<slug or UUID>`.
- */
-export const recordPath = (lang: string, model: string, record: { uuid: string, slug?: string | null }) => (
-  `/${lang}/${model}/${encodeURIComponent(record.slug || record.uuid)}`
-);
-
 type Search = (index: string, body: any) => Promise<any>;
 
 const MAX_MATCHES = 20;
+
+/**
+ * The slug each of these records' pages lives at, by UUID, for linking to
+ * them directly (Core Data's records, which most links start from, carry no
+ * slug). A record whose slug another record shares, or that the index
+ * doesn't have, is left out, so its link keeps its UUID. Empty when the index
+ * can't be read: links then fall back to UUIDs, which still redirect.
+ */
+export const findSlugs = async (
+  config: any,
+  model: string,
+  uuids: string[],
+  search: Search = (index, body) => searchIndex(index, body, 5_000)
+): Promise<Record<string, string>> => {
+  const modelType = MODEL_TYPES[model];
+  const index = indexName(config);
+  const wanted = _.uniq(_.compact(uuids));
+
+  if (!modelType || !index || !connection().host || !wanted.length) {
+    return {};
+  }
+
+  const filters = [
+    ...buildBaseFilters({ projectIds: config?.core_data?.project_ids || [], modelIds: searchModelIds(config) }),
+    { term: { model_type: modelType } }
+  ];
+
+  try {
+    const data = await search(index, {
+      size: wanted.length,
+      _source: ['uuid', 'slug'],
+      query: { bool: { filter: [...filters, { terms: { uuid: wanted } }] } }
+    });
+
+    const docs = (data?.hits?.hits || []).map((hit: any) => hit._source || {}).filter((doc: any) => doc.uuid && doc.slug);
+    const slugs = _.uniq(_.pluck(docs, 'slug'));
+
+    if (!slugs.length) {
+      return {};
+    }
+
+    // How many records hold each slug, across the whole atlas.
+    const counts = await search(index, {
+      size: 0,
+      query: { bool: { filter: [...filters, { terms: { slug: slugs } }] } },
+      aggs: { slugs: { terms: { field: 'slug', size: slugs.length } } }
+    });
+
+    const holders: Record<string, number> = {};
+    (counts?.aggregations?.slugs?.buckets || []).forEach((bucket: any) => { holders[bucket.key] = bucket.doc_count; });
+
+    return _.object(docs.filter((doc: any) => holders[doc.slug] === 1).map((doc: any) => [doc.uuid, doc.slug]));
+  } catch {
+    return {};
+  }
+};
 
 /**
  * Works out what the address segment `id` of a `model` record page means for

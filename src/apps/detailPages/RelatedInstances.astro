@@ -1,4 +1,5 @@
 ---
+import { findSlugs, recordPath } from '@utils/recordAddress';
 import RelatedSource from '@apps/detailPages/RelatedSource.astro';
 import { getTranslations } from '@backend/i18n';
 import ServiceFactory from '@services/coreData/factory';
@@ -17,12 +18,14 @@ const { excludes, model, uuid } = Astro.props;
 const lang = Astro.currentLocale;
 const service = ServiceFactory.getService(model);
 const { instances } = await service.getRelatedInstances(uuid);
+// Link each record by its slug where it has its own (see @utils/recordAddress).
+const slugs = await findSlugs(getAtlasConfig(), 'instances', (instances || []).map((record: any) => record.uuid));
 const relationships = groupRelationships(instances, excludes);
 const { t } = await getTranslations(lang);
 
 const fields = getRelationshipFields('instances', t);
 
-const resolveDetailUrl = (instance: any) => `/${lang}/instances/${instance.uuid}`;
+const resolveDetailUrl = (instance: any) => recordPath(lang, 'instances', { uuid: instance.uuid, slug: slugs[instance.uuid] });
 const showLinks = hasDetailPage('instances', getAtlasConfig());
 ---
 {Object.keys(relationships).map((uuid) => (

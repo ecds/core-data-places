@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { recordPath } from '@utils/recordPath';
 import { getExclusions } from '@utils/exclusions';
 import PeopleService from '@backend/api/coreData/people';
 import TranslationContext from '@contexts/TranslationContext';
@@ -27,7 +28,7 @@ const Person = (props: Props) => {
    */
   const resolveDetailPageUrl = useCallback((person) => {
     if (person && hasDetailPage('people', config)) {
-      return `/${lang}/people/${person.uuid}`;
+      return recordPath(lang, 'people', person);
     }
   }, [lang]);
 

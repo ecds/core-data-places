@@ -1,4 +1,5 @@
 import BasePanel from '@apps/search/map/panels/BasePanel';
+import { recordPath } from '@utils/recordPath';
 import { getExclusions } from '@utils/exclusions';
 import { getPhotoField } from '@utils/photos';
 import PlacesService from '@backend/api/coreData/places';
@@ -30,7 +31,7 @@ const Place = (props: Props) => {
    */
   const resolveDetailPageUrl = useCallback((place) => {
     if (place && hasDetailPage('places', config)) {
-      return `/${lang}/places/${place.uuid}`;
+      return recordPath(lang, 'places', place);
     }
   }, [lang]);
 

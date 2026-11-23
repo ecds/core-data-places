@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { isUuid, recordPath, resolveRecordAddress } from '../src/utils/recordAddress';
+import { findSlugs, isUuid, recordPath, resolveRecordAddress } from '../src/utils/recordAddress';
 
 const CONFIG = {
   core_data: { project_ids: [2] },
@@ -100,5 +100,34 @@ describe('resolveRecordAddress', () => {
     const filter = fakeSearch.mock.calls[0][1].query.bool.filter;
     expect(filter).toContainEqual({ terms: { project_id: ['2'] } });
     expect(filter).toContainEqual({ term: { model_type: 'place' } });
+  });
+});
+
+/**
+ * Answers findSlugs' two queries: records by UUID, then how many hold each slug.
+ */
+const fakeBatch = vi.fn(async (_index: string, body: any) => {
+  const filter = body.query.bool.filter;
+  const terms = filter.find((clause: any) => clause.terms && (clause.terms.uuid || clause.terms.slug)).terms;
+
+  if (terms.uuid) {
+    return { hits: { hits: DOCS.filter((doc) => terms.uuid.includes(doc.uuid)).map((doc) => ({ _source: doc })) } };
+  }
+
+  const buckets = terms.slug.map((slug: string) => ({ key: slug, doc_count: DOCS.filter((doc) => doc.slug === slug).length }));
+  return { hits: { hits: [] }, aggregations: { slugs: { buckets } } };
+});
+
+describe('findSlugs', () => {
+  it('gives each record its slug, leaving out shared slugs and unknown records', async () => {
+    const slugs = await findSlugs(CONFIG, 'places', [MIZPAH.uuid, TWIN_A.uuid, ANTIOCH_A.uuid, '99999999-9999-4999-8999-999999999999'], fakeBatch);
+    expect(slugs).toEqual({ [MIZPAH.uuid]: MIZPAH.slug, [ANTIOCH_A.uuid]: ANTIOCH_A.slug });
+  });
+
+  it('asks nothing for no records, and gives nothing when the index fails', async () => {
+    fakeBatch.mockClear();
+    expect(await findSlugs(CONFIG, 'places', [], fakeBatch)).toEqual({});
+    expect(fakeBatch).not.toHaveBeenCalled();
+    expect(await findSlugs(CONFIG, 'places', [MIZPAH.uuid], async () => { throw new Error('down'); })).toEqual({});
   });
 });
