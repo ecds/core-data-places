@@ -290,6 +290,7 @@ const Map = (props: Props) => {
                 key={overlay.name}
                 labelField={overlay.label_field}
                 onSelectPlace={onSelectPlace}
+                typeIcons={overlay.type_icons || (config as any)?.map?.type_icons}
                 opacity={overlay.opacity}
                 styles={overlay.styles}
                 url={overlay.url}

@@ -1,0 +1,42 @@
+{
+  "church": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 0,
+    "y": 0,
+    "sdf": true
+  },
+  "lighthouse": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 0,
+    "y": 54,
+    "sdf": true
+  },
+  "marker": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 54,
+    "y": 0,
+    "sdf": true
+  },
+  "tree": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 54,
+    "y": 54,
+    "sdf": true
+  },
+  "water": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 108,
+    "y": 0,
+    "sdf": true
+  }
+}

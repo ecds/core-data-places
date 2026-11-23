@@ -106,13 +106,50 @@ export const PLACE_LAYER_IDS = {
   cluster: 'og-places-cluster',
   clusterCount: 'og-places-cluster-count',
   point: 'og-places-point',
+  icon: 'og-places-icon',
   label: 'og-places-label'
 };
 
-export const CLICKABLE_PLACE_LAYERS = [PLACE_LAYER_IDS.point, PLACE_LAYER_IDS.line, PLACE_LAYER_IDS.fill];
+export const CLICKABLE_PLACE_LAYERS = [PLACE_LAYER_IDS.point, PLACE_LAYER_IDS.icon, PLACE_LAYER_IDS.line, PLACE_LAYER_IDS.fill];
 
 // Ids starting with this are used as they are, not prefixed with the source's.
 export const FIXED_LAYER_PREFIX = 'og-';
+
+/**
+ * The renderer's own icon sprite (`npm run build:sprites`), loaded next to
+ * the base map's under this id: icons are `og:<name>`.
+ */
+export const SPRITE_ID = 'og';
+export const SPRITE_PATH = '/sprites/og';
+
+/**
+ * An icon and colour for a place type, from an atlas's `type_icons`:
+ * `{ "Church": { "icon": "church", "color": "#1e40af" } }`.
+ */
+export interface TypeIcon {
+  icon: string;
+  color?: string;
+}
+
+export type TypeIcons = Record<string, TypeIcon>;
+
+/**
+ * Whether a tile feature is of this type: its plain `type`, if the tiles
+ * carry one, or a quoted match in `types`, which tiles store as JSON text
+ * (so "Park" doesn't also match "Parking Lot").
+ */
+export const typeMatch = (type: string) => ['any',
+  ['==', ['get', 'type'], type],
+  ['in', JSON.stringify(type), ['coalesce', ['get', 'types'], '']]
+];
+
+const iconEntries = (typeIcons?: TypeIcons) => Object.entries(typeIcons || {})
+  .filter(([type, entry]) => type && entry?.icon);
+
+/**
+ * Whether the atlas's styles use the icon sprite.
+ */
+export const usesIcons = (styles: any[]) => styles.some((style) => style.id === PLACE_LAYER_IDS.icon);
 
 /**
  * Tiles from FairData's og_pmtiles task (ECDS): one "places" layer, with
@@ -121,10 +158,19 @@ export const FIXED_LAYER_PREFIX = 'og-';
  * come in a layer of their own, "areas". The atlas's own places may be
  * points, lines or polygons.
  *
+ * Places of a type in `typeIcons` are drawn with its icon and colour (the
+ * first listed type a place has wins); the rest stay circles. Clusters never
+ * take an icon.
+ *
  * @param labelField
  * @param separateAreas  the tiles have an "areas" layer
+ * @param typeIcons
  */
-export const clusteredPlacesStyles = (labelField: string, separateAreas = false) => {
+export const clusteredPlacesStyles = (labelField: string, separateAreas = false, typeIcons?: TypeIcons) => {
+  const icons = iconEntries(typeIcons);
+  const matches = icons.map(([type]) => typeMatch(type));
+  const hasIcon = ['any', ...matches];
+
   const areas = separateAreas
     ? { 'source-layer': 'areas', filter: POLYGON }
     : { 'source-layer': 'places', filter: TILE_FILTERS.area };
@@ -203,7 +249,7 @@ export const clusteredPlacesStyles = (labelField: string, separateAreas = false)
     id: PLACE_LAYER_IDS.point,
     type: 'circle',
     'source-layer': 'places',
-    filter: TILE_FILTERS.point,
+    filter: icons.length ? ['all', TILE_FILTERS.point, ['!', hasIcon]] : TILE_FILTERS.point,
     paint: {
       'circle-color': DEFAULT_COLOR,
       'circle-opacity': 0.85,
@@ -211,7 +257,22 @@ export const clusteredPlacesStyles = (labelField: string, separateAreas = false)
       'circle-stroke-width': 1,
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 3, 10, 5]
     }
-  }, {
+  }, ...(icons.length ? [{
+    id: PLACE_LAYER_IDS.icon,
+    type: 'symbol',
+    'source-layer': 'places',
+    filter: ['all', TILE_FILTERS.point, hasIcon],
+    layout: {
+      'icon-image': ['case', ...icons.flatMap(([type, entry]) => [typeMatch(type), `${SPRITE_ID}:${entry.icon}`]), `${SPRITE_ID}:marker`],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1.4],
+      'icon-allow-overlap': true
+    },
+    paint: {
+      'icon-color': ['case', ...icons.flatMap(([type, entry]) => [typeMatch(type), entry.color || DEFAULT_COLOR]), DEFAULT_COLOR],
+      'icon-halo-color': '#ffffff',
+      'icon-halo-width': 1
+    }
+  }] : []), {
     id: PLACE_LAYER_IDS.label,
     type: 'symbol',
     'source-layer': 'places',
@@ -234,13 +295,14 @@ export const isPlacesTileSet = (layerIds: string[]) => layerIds.includes('places
  *
  * @param layerIds
  * @param labelField
+ * @param typeIcons  an icon and colour per place type, for og_pmtiles tiles
  */
-export const stylesForLayers = (layerIds: string[], labelField: string) => {
+export const stylesForLayers = (layerIds: string[], labelField: string, typeIcons?: TypeIcons) => {
   if (!layerIds.length || layerIds.includes('features') || layerIds.includes('labels')) {
     return defaultStyles(labelField);
   }
 
   return isPlacesTileSet(layerIds)
-    ? clusteredPlacesStyles(labelField, layerIds.includes('areas'))
+    ? clusteredPlacesStyles(labelField, layerIds.includes('areas'), typeIcons)
     : defaultStyles(labelField, layerIds[0]);
 };

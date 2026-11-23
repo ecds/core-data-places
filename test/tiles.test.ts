@@ -7,7 +7,7 @@ import {
   tileUrlKind,
   vectorLayerIds
 } from '../src/utils/tiles';
-import { CLICKABLE_PLACE_LAYERS, clusteredPlacesStyles, defaultStyles, PLACE_LAYER_IDS, stylesForLayers, TILE_FILTERS } from '../src/utils/tileStyles';
+import { CLICKABLE_PLACE_LAYERS, clusteredPlacesStyles, DEFAULT_COLOR, defaultStyles, PLACE_LAYER_IDS, stylesForLayers, TILE_FILTERS, typeMatch, usesIcons } from '../src/utils/tileStyles';
 
 describe('tileUrlKind', () => {
   it('tells archives, TileJSON documents and templates apart', () => {
@@ -90,10 +90,10 @@ describe('og_pmtiles styles', () => {
   const ids = (styles: any[]) => styles.map((style) => style.id);
 
   it('draws with fixed layer ids, the same for every atlas', () => {
-    const styles = clusteredPlacesStyles('name');
+    const styles = clusteredPlacesStyles('name', false, { Church: { icon: 'church' } });
     expect(ids(styles)).toEqual(expect.arrayContaining(Object.values(PLACE_LAYER_IDS)));
     expect(ids(styles).every((id) => id.startsWith('og-'))).toBe(true);
-    expect(CLICKABLE_PLACE_LAYERS).toEqual(['og-places-point', 'og-places-line', 'og-places-fill']);
+    expect(CLICKABLE_PLACE_LAYERS).toEqual(['og-places-point', 'og-places-icon', 'og-places-line', 'og-places-fill']);
   });
 
   it('draws the atlas\'s own lines and polygons, not the areas they sit in', () => {
@@ -122,5 +122,32 @@ describe('og_pmtiles styles', () => {
     expect(together['source-layer']).toBe('places');
     expect(together.filter).toEqual(TILE_FILTERS.area);
     expect(separate['source-layer']).toBe('areas');
+  });
+});
+
+describe('type icons', () => {
+  const ICONS = { Church: { icon: 'church', color: '#1e40af' }, Park: { icon: 'tree' } };
+  const styles = clusteredPlacesStyles('name', false, ICONS);
+  const icon = styles.find((style) => style.id === PLACE_LAYER_IDS.icon) as any;
+  const point = styles.find((style) => style.id === PLACE_LAYER_IDS.point) as any;
+
+  it('matches a type by its quoted name in types, or a plain type', () => {
+    expect(typeMatch('Park')).toEqual(['any', ['==', ['get', 'type'], 'Park'], ['in', '"Park"', ['coalesce', ['get', 'types'], '']]]);
+  });
+
+  it('draws typed places with the sprite\'s icons and the chosen colours, first listed type first', () => {
+    expect(icon.layout['icon-image']).toEqual(['case', typeMatch('Church'), 'og:church', typeMatch('Park'), 'og:tree', 'og:marker']);
+    expect(icon.paint['icon-color']).toEqual(['case', typeMatch('Church'), '#1e40af', typeMatch('Park'), DEFAULT_COLOR, DEFAULT_COLOR]);
+    expect(usesIcons(styles)).toBe(true);
+  });
+
+  it('keeps clusters out of the icons, and typed places out of the circles', () => {
+    expect(icon.filter[1]).toEqual(TILE_FILTERS.point);
+    expect(point.filter).toEqual(['all', TILE_FILTERS.point, ['!', ['any', typeMatch('Church'), typeMatch('Park')]]]);
+  });
+
+  it('adds no icon layer without type icons', () => {
+    expect(usesIcons(clusteredPlacesStyles('name'))).toBe(false);
+    expect(usesIcons(stylesForLayers(['places'], 'name', { Church: { icon: '' } }))).toBe(false);
   });
 });

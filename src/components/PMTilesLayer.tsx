@@ -9,7 +9,11 @@ import {
   FIXED_LAYER_PREFIX,
   isPlacesTileSet,
   PLACE_LAYER_IDS,
-  stylesForLayers
+  SPRITE_ID,
+  SPRITE_PATH,
+  stylesForLayers,
+  type TypeIcons,
+  usesIcons
 } from '@utils/tileStyles';
 
 /**
@@ -70,8 +74,27 @@ interface Props {
    * when the visitor clicks it, for og_pmtiles tiles. Clicking a cluster
    * zooms in instead.
    */
-  onSelectPlace?: (place: { uuid: string, slug?: string, name?: string }) => void
+  onSelectPlace?: (place: { uuid: string, slug?: string, name?: string }) => void,
+
+  /**
+   * (Optional) an icon and colour per place type, for og_pmtiles tiles:
+   * `{ "Church": { "icon": "church", "color": "#1e40af" } }`. Icons come from
+   * the renderer's sprite (`npm run build:sprites`).
+   */
+  typeIcons?: TypeIcons
 }
+
+/**
+ * Loads the renderer's icon sprite next to the base map's, once per style
+ * (a base map change replaces the style and its sprites).
+ */
+const ensureSprite = (map: any) => {
+  const sprites = map.getSprite?.() || [];
+
+  if (!sprites.some((sprite: any) => sprite.id === SPRITE_ID)) {
+    map.addSprite(SPRITE_ID, new URL(SPRITE_PATH, window.location.origin).toString());
+  }
+};
 
 /**
  * A style's MapLibre layer id: og_pmtiles' are fixed (see PLACE_LAYER_IDS),
@@ -159,6 +182,10 @@ const PMTilesLayer = (props: Props) => {
       stylesRef.current = styles;
 
       try {
+        if (usesIcons(styles)) {
+          ensureSprite(map);
+        }
+
         if (!map.getSource(sourceId)) {
           map.addSource(sourceId, source);
         }
@@ -202,7 +229,7 @@ const PMTilesLayer = (props: Props) => {
           if (isPlacesTileSet(vectorLayers)) {
             source.promoteId = 'uuid';
           }
-          styles = props.styles || stylesForLayers(vectorLayers, labelField);
+          styles = props.styles || stylesForLayers(vectorLayers, labelField, props.typeIcons);
           addLayers();
         })
         .catch((error) => console.error('PMTilesLayer: failed to read the TileJSON', error));
@@ -234,7 +261,7 @@ const PMTilesLayer = (props: Props) => {
         // The map may already be destroyed during teardown.
       }
     };
-  }, [map, props.url]);
+  }, [map, props.url, JSON.stringify(props.typeIcons || null)]);
 
   // The overlay's opacity times each style's own (a number; an expression is
   // left as styled), as the visitor changes it.
