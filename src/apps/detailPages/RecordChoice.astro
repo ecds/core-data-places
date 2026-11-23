@@ -1,0 +1,41 @@
+---
+import { getTranslations } from '@backend/i18n';
+import Container from '@components/Container.astro';
+
+/**
+ * Shown when several records share the slug in the address: each one, linked
+ * by its UUID so the link reaches exactly that record, with its own slug
+ * (which, for a place, names its county) to tell same-named records apart.
+ */
+interface Props {
+  lang: string;
+  model: string;
+  records: Array<{ uuid: string, name?: string, slug?: string }>;
+}
+
+const { lang, model, records } = Astro.props;
+const { t } = await getTranslations(Astro.currentLocale);
+---
+
+<Container
+  className='w-full py-24'
+>
+  <div
+    class='max-w-3xl mx-auto flex flex-col gap-4 text-content'
+  >
+    <h1>{ t('recordChoice') }</h1>
+    <ul class='list-disc pl-6'>
+      { records.map((record) => (
+        <li>
+          <a
+            class='underline'
+            href={`/${lang}/${model}/${encodeURIComponent(record.uuid)}`}
+          >
+            { record.name || record.uuid }
+          </a>
+          { record.slug && <span class='text-sm opacity-75'> ({ record.slug })</span> }
+        </li>
+      ))}
+    </ul>
+  </div>
+</Container>

@@ -547,6 +547,10 @@
     "tinaLabel": "Page not found",
     "defaultValue": "Page not found"
   },
+  "recordChoice": {
+    "tinaLabel": "Several records at one address",
+    "defaultValue": "Several records share this address. Choose one:"
+  },
   "pageNotFoundBody": {
     "tinaLabel": "Page not found text",
     "defaultValue": "There's no page at this address."

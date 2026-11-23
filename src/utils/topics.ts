@@ -153,6 +153,7 @@ export const fetchTopics = async (config: any): Promise<Topic[]> => {
 
 export interface TopicPlace {
   uuid: string;
+  slug?: string;
   name: string;
   point?: { lat: number, lon: number };
 }
@@ -166,13 +167,14 @@ export const fetchTopicPlaces = async (config: any, name: string, limit = 500): 
 
   const data = await search(index, {
     size: limit,
-    _source: ['uuid', 'name', 'geo.point'],
+    _source: ['uuid', 'slug', 'name', 'geo.point'],
     sort: [{ 'name.keyword': 'asc' }],
     query: { bool: { filter: [...filters, { term: { types: name } }] } }
   });
 
   return (data?.hits?.hits || []).map((hit: any) => ({
     uuid: hit._source?.uuid,
+    slug: hit._source?.slug,
     name: hit._source?.name,
     point: hit._source?.geo?.point
   })).filter((place: TopicPlace) => place.uuid && place.name);

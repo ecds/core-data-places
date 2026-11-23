@@ -1,5 +1,7 @@
 import { buildBaseFilters } from '@search/elasticsearch/filters';
 import { fetchTopics, getTopicsConfig } from '@utils/topics';
+import { recordPath } from '@utils/recordAddress';
+import { connection, indexName, MODEL_TYPES, searchIndex as search, searchModelIds } from '@utils/recordIndex';
 import _ from 'underscore';
 
 /**
@@ -13,17 +15,6 @@ import _ from 'underscore';
 // A sitemap file holds at most 50,000 addresses; stay well under.
 export const URLS_PER_FILE = 40_000;
 const PAGE = 5_000;
-
-// Detail-page route → the index's model_type.
-const MODEL_TYPES: Record<string, string> = {
-  places: 'place',
-  people: 'person',
-  organizations: 'organization',
-  events: 'event',
-  works: 'work',
-  items: 'item',
-  instances: 'instance'
-};
 
 export interface SitemapUrl {
   loc: string;
@@ -77,7 +68,7 @@ export const pageUrls = (origin: string, config: any, content: any): SitemapUrl[
 
 const recordQuery = (config: any) => {
   const projectIds = config?.core_data?.project_ids || [];
-  const modelIds = _.uniq(_.flatten((config?.search || []).map((search: any) => search?.elasticsearch?.model_ids || [])));
+  const modelIds = searchModelIds(config);
   const models = Object.keys(config?.detail_pages?.models || {}).filter((model) => MODEL_TYPES[model]);
 
   if (!models.length) {
@@ -97,31 +88,6 @@ const recordQuery = (config: any) => {
   };
 };
 
-const indexName = (config: any): string | null => (
-  _.find((config?.search || []).map((search: any) => search?.elasticsearch?.index_name), Boolean) || null
-);
-
-const connection = () => ({
-  host: (process.env.OG_ELASTICSEARCH_URL || process.env.ELASTICSEARCH_URL || '').replace(/\/+$/, ''),
-  apiKey: process.env.OG_ELASTICSEARCH_API_KEY || process.env.ELASTICSEARCH_API_KEY
-});
-
-const search = async (index: string, body: any) => {
-  const { host, apiKey } = connection();
-  const response = await fetch(`${host}/${encodeURIComponent(index)}/_search`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `ApiKey ${apiKey}` } : {}) },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(20_000)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Elasticsearch answered ${response.status}`);
-  }
-
-  return response.json();
-};
-
 /**
  * How many record addresses the atlas has (records × locales).
  */
@@ -139,7 +105,7 @@ export const countRecordUrls = async (config: any): Promise<number> => {
 
 /**
  * Record addresses `skip` .. `skip + limit` (in uuid order), each record
- * once per locale.
+ * once per locale, at its slug.
  */
 export const recordUrls = async (origin: string, config: any, skip = 0, limit = URLS_PER_FILE): Promise<SitemapUrl[]> => {
   const plan = recordQuery(config);
@@ -158,7 +124,7 @@ export const recordUrls = async (origin: string, config: any, skip = 0, limit = 
   while (urls.length < limit) {
     const data = await search(index, {
       size: PAGE,
-      _source: ['uuid', 'model_type', 'date_modified'],
+      _source: ['uuid', 'slug', 'model_type', 'date_modified'],
       sort: [{ uuid: 'asc' }],
       query: plan.query,
       ...(after ? { search_after: after } : {})
@@ -167,7 +133,7 @@ export const recordUrls = async (origin: string, config: any, skip = 0, limit = 
     const hits = data?.hits?.hits || [];
 
     for (const hit of hits) {
-      const { uuid, model_type: type, date_modified: modified } = hit._source || {};
+      const { uuid, slug, model_type: type, date_modified: modified } = hit._source || {};
       const route = routes[type];
 
       for (const lang of langs) {
@@ -176,7 +142,7 @@ export const recordUrls = async (origin: string, config: any, skip = 0, limit = 
         }
 
         if (urls.length < limit) {
-          urls.push({ loc: `${origin}/${lang}/${route}/${encodeURIComponent(uuid)}`, lastmod: modified });
+          urls.push({ loc: `${origin}${recordPath(lang, route, { uuid, slug })}`, lastmod: modified });
         }
       }
     }

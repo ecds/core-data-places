@@ -1,0 +1,49 @@
+---
+import Organization from '@apps/detailPages/Organization.astro';
+import NotFound from '@apps/pages/NotFound.astro';
+import RecordChoice from '@apps/detailPages/RecordChoice.astro';
+import { getAtlasConfig } from '@atlas/server';
+import Layout from '@layouts/Layout.astro';
+import { recordPath, resolveRecordAddress } from '@utils/recordAddress';
+
+const { lang, id } = Astro.params;
+
+// The address is the record's slug; a UUID or another of its slugs
+// redirects there (see @utils/recordAddress).
+const address = await resolveRecordAddress(getAtlasConfig(), 'organizations', id);
+
+if (address.kind === 'redirect') {
+  return Astro.redirect(`${recordPath(lang, 'organizations', { uuid: address.to })}${Astro.url.search}`, 302);
+}
+
+if (address.kind === 'missing') {
+  Astro.response.status = 404;
+}
+
+if (address.kind === 'unavailable') {
+  Astro.response.status = 503;
+}
+---
+
+<Layout
+  footer
+>
+  { address.kind === 'record' && (
+    <Organization
+      lang={lang}
+      uuid={address.uuid}
+      server:defer
+    >
+      { /* Holds the page's height while the record loads, so the footer doesn't jump. */ }
+      <div slot='fallback' class='min-h-screen' aria-busy='true'></div>
+    </Organization>
+  )}
+  { address.kind === 'choose' && (
+    <RecordChoice
+      lang={lang}
+      model='organizations'
+      records={address.records}
+    />
+  )}
+  { (address.kind === 'missing' || address.kind === 'unavailable') && <NotFound /> }
+</Layout>

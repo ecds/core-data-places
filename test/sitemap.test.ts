@@ -47,6 +47,21 @@ describe('sitemap', () => {
     expect(await countRecordUrls(config)).toBe(24_000);
   });
 
+  test('lists a record at its slug, and at its UUID when it has none', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ hits: { hits: [
+      { _source: { uuid: 'u1', slug: 'mizpah-methodist-effingham', model_type: 'place' }, sort: ['u1'] },
+      { _source: { uuid: 'u2', model_type: 'place' }, sort: ['u2'] }
+    ] } }))));
+
+    const urls = await recordUrls('https://a.test', config, 0, 10);
+    expect(urls.map((u) => u.loc)).toEqual([
+      'https://a.test/en/places/mizpah-methodist-effingham',
+      'https://a.test/es/places/mizpah-methodist-effingham',
+      'https://a.test/en/places/u2',
+      'https://a.test/es/places/u2'
+    ]);
+  });
+
   test('pages through the index and skips into a later file', async () => {
     const first = await recordUrls('https://a.test', config, 0, 10);
     expect(first[0].loc).toBe('https://a.test/en/places/u00000');
