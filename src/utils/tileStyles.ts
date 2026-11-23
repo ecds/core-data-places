@@ -70,86 +70,162 @@ export const defaultStyles = (labelField: string, layer?: string) => [{
   ...(layer ? { filter: POINT } : {})
 }];
 
-// A cluster made by tippecanoe: point_count > 1.
-const CLUSTER = ['all', POINT, ['>', ['coalesce', ['get', 'point_count'], 1], 1]];
-// A place of the atlas's own (not an area it's contained in, not a cluster).
-const PLACE = ['all', POINT, ['!=', ['get', 'contained_in'], true], ['<=', ['coalesce', ['get', 'point_count'], 1], 1]];
-// The boundary of an area the atlas's places are contained in.
-const AREA = ['all', POLYGON, ['==', ['get', 'contained_in'], true]];
+const LINE = ['==', ['geometry-type'], 'LineString'];
+const NOT_AREA = ['!=', ['get', 'contained_in'], true];
+const NOT_CLUSTER = ['<=', ['coalesce', ['get', 'point_count'], 1], 1];
+
+/**
+ * Filters for the og_pmtiles convention, for styles that draw on it. A layer
+ * that styles places by type must keep `NOT_CLUSTER`: a cluster carries one
+ * of its places' properties, so it would otherwise take that place's look.
+ */
+export const TILE_FILTERS = {
+  // A cluster made by tippecanoe: point_count > 1.
+  cluster: ['all', POINT, ['>', ['coalesce', ['get', 'point_count'], 1], 1]],
+  // One of the atlas's own places, as a point.
+  point: ['all', POINT, NOT_AREA, NOT_CLUSTER],
+  // One of the atlas's own places drawn as a line (a stream, a road).
+  line: ['all', LINE, NOT_AREA],
+  // One of the atlas's own places drawn as an area (an island, a park).
+  polygon: ['all', POLYGON, NOT_AREA],
+  // An area the atlas's places are contained in (a county, the state).
+  area: ['all', POLYGON, ['==', ['get', 'contained_in'], true]],
+  notCluster: NOT_CLUSTER
+};
+
+/**
+ * The MapLibre layer ids og_pmtiles tiles are drawn with, the same for every
+ * atlas, so a style or a click handler can name them. Clicking one of
+ * `CLICKABLE_PLACE_LAYERS` opens that place.
+ */
+export const PLACE_LAYER_IDS = {
+  areaLine: 'og-areas-line',
+  fill: 'og-places-fill',
+  outline: 'og-places-outline',
+  line: 'og-places-line',
+  cluster: 'og-places-cluster',
+  clusterCount: 'og-places-cluster-count',
+  point: 'og-places-point',
+  label: 'og-places-label'
+};
+
+export const CLICKABLE_PLACE_LAYERS = [PLACE_LAYER_IDS.point, PLACE_LAYER_IDS.line, PLACE_LAYER_IDS.fill];
+
+// Ids starting with this are used as they are, not prefixed with the source's.
+export const FIXED_LAYER_PREFIX = 'og-';
 
 /**
  * Tiles from FairData's og_pmtiles task (ECDS): one "places" layer, with
  * nearby places clustered at low zooms (point_count, point_count_abbreviated)
- * and the areas they're contained in (contained_in: true).
+ * and the areas they're contained in (contained_in: true), which may instead
+ * come in a layer of their own, "areas". The atlas's own places may be
+ * points, lines or polygons.
  *
  * @param labelField
+ * @param separateAreas  the tiles have an "areas" layer
  */
-export const clusteredPlacesStyles = (labelField: string) => [{
-  id: 'area-fill',
-  type: 'fill',
-  'source-layer': 'places',
-  filter: AREA,
-  paint: {
-    'fill-color': DEFAULT_COLOR,
-    'fill-opacity': 0.04
-  }
-}, {
-  id: 'area-line',
-  type: 'line',
-  'source-layer': 'places',
-  filter: AREA,
-  paint: {
-    'line-color': DEFAULT_COLOR,
-    'line-opacity': 0.35,
-    'line-width': 0.75
-  }
-}, {
-  id: 'cluster',
-  type: 'circle',
-  'source-layer': 'places',
-  filter: CLUSTER,
-  paint: {
-    'circle-color': DEFAULT_COLOR,
-    'circle-opacity': 0.8,
-    'circle-stroke-color': '#ffffff',
-    'circle-stroke-width': 1.5,
-    'circle-radius': ['step', ['get', 'point_count'], 10, 10, 14, 50, 18, 200, 22]
-  }
-}, {
-  id: 'cluster-count',
-  type: 'symbol',
-  'source-layer': 'places',
-  filter: CLUSTER,
-  layout: {
-    'text-field': ['to-string', ['coalesce', ['get', 'point_count_abbreviated'], ['get', 'point_count']]],
-    'text-font': ['Open Sans Regular'],
-    'text-size': 11,
-    'text-allow-overlap': true
-  },
-  paint: {
-    'text-color': '#ffffff'
-  }
-}, {
-  id: 'point',
-  type: 'circle',
-  'source-layer': 'places',
-  filter: PLACE,
-  paint: {
-    'circle-color': DEFAULT_COLOR,
-    'circle-opacity': 0.85,
-    'circle-stroke-color': '#ffffff',
-    'circle-stroke-width': 1,
-    'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 3, 10, 5]
-  }
-}, {
-  id: 'label',
-  type: 'symbol',
-  'source-layer': 'places',
-  filter: PLACE,
-  minzoom: 9,
-  layout: labelLayout(labelField),
-  paint: labelPaint
-}];
+export const clusteredPlacesStyles = (labelField: string, separateAreas = false) => {
+  const areas = separateAreas
+    ? { 'source-layer': 'areas', filter: POLYGON }
+    : { 'source-layer': 'places', filter: TILE_FILTERS.area };
+
+  // Areas are outlined, not filled: a county inside the state would stack
+  // two fills and tint the whole map.
+  return [{
+    id: PLACE_LAYER_IDS.areaLine,
+    type: 'line',
+    ...areas,
+    paint: {
+      'line-color': DEFAULT_COLOR,
+      'line-opacity': 0.35,
+      'line-width': 0.75
+    }
+  }, {
+    id: PLACE_LAYER_IDS.fill,
+    type: 'fill',
+    'source-layer': 'places',
+    filter: TILE_FILTERS.polygon,
+    paint: {
+      'fill-color': DEFAULT_COLOR,
+      'fill-opacity': 0.2
+    }
+  }, {
+    id: PLACE_LAYER_IDS.outline,
+    type: 'line',
+    'source-layer': 'places',
+    filter: TILE_FILTERS.polygon,
+    paint: {
+      'line-color': DEFAULT_COLOR,
+      'line-opacity': 0.8,
+      'line-width': 1
+    }
+  }, {
+    id: PLACE_LAYER_IDS.line,
+    type: 'line',
+    'source-layer': 'places',
+    filter: TILE_FILTERS.line,
+    layout: {
+      'line-cap': 'round',
+      'line-join': 'round'
+    },
+    paint: {
+      'line-color': DEFAULT_COLOR,
+      'line-opacity': 0.8,
+      'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1, 12, 2.5]
+    }
+  }, {
+    id: PLACE_LAYER_IDS.cluster,
+    type: 'circle',
+    'source-layer': 'places',
+    filter: TILE_FILTERS.cluster,
+    paint: {
+      'circle-color': DEFAULT_COLOR,
+      'circle-opacity': 0.8,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': 1.5,
+      'circle-radius': ['step', ['get', 'point_count'], 10, 10, 14, 50, 18, 200, 22]
+    }
+  }, {
+    id: PLACE_LAYER_IDS.clusterCount,
+    type: 'symbol',
+    'source-layer': 'places',
+    filter: TILE_FILTERS.cluster,
+    layout: {
+      'text-field': ['to-string', ['coalesce', ['get', 'point_count_abbreviated'], ['get', 'point_count']]],
+      'text-font': ['Open Sans Regular'],
+      'text-size': 11,
+      'text-allow-overlap': true
+    },
+    paint: {
+      'text-color': '#ffffff'
+    }
+  }, {
+    id: PLACE_LAYER_IDS.point,
+    type: 'circle',
+    'source-layer': 'places',
+    filter: TILE_FILTERS.point,
+    paint: {
+      'circle-color': DEFAULT_COLOR,
+      'circle-opacity': 0.85,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': 1,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 3, 10, 5]
+    }
+  }, {
+    id: PLACE_LAYER_IDS.label,
+    type: 'symbol',
+    'source-layer': 'places',
+    filter: TILE_FILTERS.point,
+    minzoom: 9,
+    layout: labelLayout(labelField),
+    paint: labelPaint
+  }];
+};
+
+/**
+ * Whether a tile set follows the og_pmtiles convention (a "places" layer).
+ */
+export const isPlacesTileSet = (layerIds: string[]) => layerIds.includes('places');
 
 /**
  * The styles for a tile set with these vector layers: build:tiles' own
@@ -164,5 +240,7 @@ export const stylesForLayers = (layerIds: string[], labelField: string) => {
     return defaultStyles(labelField);
   }
 
-  return layerIds.includes('places') ? clusteredPlacesStyles(labelField) : defaultStyles(labelField, layerIds[0]);
+  return isPlacesTileSet(layerIds)
+    ? clusteredPlacesStyles(labelField, layerIds.includes('areas'))
+    : defaultStyles(labelField, layerIds[0]);
 };

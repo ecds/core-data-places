@@ -7,7 +7,7 @@ import {
   tileUrlKind,
   vectorLayerIds
 } from '../src/utils/tiles';
-import { clusteredPlacesStyles, defaultStyles, stylesForLayers } from '../src/utils/tileStyles';
+import { CLICKABLE_PLACE_LAYERS, clusteredPlacesStyles, defaultStyles, PLACE_LAYER_IDS, stylesForLayers, TILE_FILTERS } from '../src/utils/tileStyles';
 
 describe('tileUrlKind', () => {
   it('tells archives, TileJSON documents and templates apart', () => {
@@ -83,5 +83,44 @@ describe('stylesForLayers', () => {
 
     expect(styles.every((style) => style['source-layer'] === 'churches')).toBe(true);
     expect(styles.find((style) => style.id === 'label')?.layout?.['text-field']).toEqual(['get', 'title']);
+  });
+});
+
+describe('og_pmtiles styles', () => {
+  const ids = (styles: any[]) => styles.map((style) => style.id);
+
+  it('draws with fixed layer ids, the same for every atlas', () => {
+    const styles = clusteredPlacesStyles('name');
+    expect(ids(styles)).toEqual(expect.arrayContaining(Object.values(PLACE_LAYER_IDS)));
+    expect(ids(styles).every((id) => id.startsWith('og-'))).toBe(true);
+    expect(CLICKABLE_PLACE_LAYERS).toEqual(['og-places-point', 'og-places-line', 'og-places-fill']);
+  });
+
+  it('draws the atlas\'s own lines and polygons, not the areas they sit in', () => {
+    const styles = clusteredPlacesStyles('name');
+    const byId = (id: string) => styles.find((style) => style.id === id) as any;
+
+    expect(byId(PLACE_LAYER_IDS.line).filter).toEqual(TILE_FILTERS.line);
+    expect(byId(PLACE_LAYER_IDS.fill).filter).toEqual(TILE_FILTERS.polygon);
+    expect(JSON.stringify(TILE_FILTERS.line)).toContain('contained_in');
+    expect(JSON.stringify(TILE_FILTERS.polygon)).toContain('contained_in');
+  });
+
+  it('keeps clusters out of the place points and labels', () => {
+    const styles = clusteredPlacesStyles('name');
+    const point = styles.find((style) => style.id === PLACE_LAYER_IDS.point) as any;
+    const label = styles.find((style) => style.id === PLACE_LAYER_IDS.label) as any;
+
+    expect(point.filter).toContainEqual(TILE_FILTERS.notCluster);
+    expect(label.filter).toContainEqual(TILE_FILTERS.notCluster);
+  });
+
+  it('reads areas from their own layer when the tiles have one', () => {
+    const together = stylesForLayers(['places'], 'name').find((style) => style.id === PLACE_LAYER_IDS.areaLine) as any;
+    const separate = stylesForLayers(['places', 'areas'], 'name').find((style) => style.id === PLACE_LAYER_IDS.areaLine) as any;
+
+    expect(together['source-layer']).toBe('places');
+    expect(together.filter).toEqual(TILE_FILTERS.area);
+    expect(separate['source-layer']).toBe('areas');
   });
 });

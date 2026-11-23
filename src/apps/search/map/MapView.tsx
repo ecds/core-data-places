@@ -258,6 +258,7 @@ const MapView = () => {
       classNames={{
         controls: controlsClass
       }}
+      onSelectPlace={(place) => navigate(`/places/${place.uuid}`)}
     >
       <FitBounds />
       <ViewportRefinement />

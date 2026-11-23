@@ -13,6 +13,8 @@ import defaults from '@config' with { type: 'json' };
 import { resolveAssetPath } from '@utils/images';
 import { getDatedLayers, getInitialMapYear, getLayersForYear, getMapYears } from '@utils/mapYears';
 import { hasOpacity, opacityOf } from '@utils/overlays';
+import { hasDetailPage } from '@utils/detailPagePaths';
+import { recordPath } from '@utils/recordPath';
 import { supportsWebGL } from '@utils/webgl';
 import ImageOverlayLayer from './ImageOverlayLayer';
 import LayersControl from './LayersControl';
@@ -129,6 +131,11 @@ const KeepOverlaysBelowData = ({ names }: { names: string[] }) => {
 
 interface Props {
   children: ReactNode,
+  /**
+   * What clicking one of the atlas's places on its tiles (og_pmtiles) does.
+   * By default, opens the place's page when the atlas has place pages.
+   */
+  onSelectPlace?: (place: { uuid: string, slug?: string }) => void,
   classNames?: {
     controls?: string
     root?: string,
@@ -190,7 +197,13 @@ const Map = (props: Props) => {
     }))
   ];
 
-  const { t } = useContext(TranslationContext);
+  const { lang, t } = useContext(TranslationContext);
+
+  const onSelectPlace = useMemo(() => props.onSelectPlace || (
+    hasDetailPage('places', config)
+      ? (place: { uuid: string, slug?: string }) => window.location.assign(recordPath(lang, 'places', place))
+      : undefined
+  ), [props.onSelectPlace, config, lang]);
 
   /**
    * Memo-izes the class to apply to the map control buttons.
@@ -276,6 +289,7 @@ const Map = (props: Props) => {
                 id={overlay.name}
                 key={overlay.name}
                 labelField={overlay.label_field}
+                onSelectPlace={onSelectPlace}
                 opacity={overlay.opacity}
                 styles={overlay.styles}
                 url={overlay.url}
