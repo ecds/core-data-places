@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isPublicFile } from './publicFiles.mjs';
 
 /**
  * The renderer's server: Astro's standalone Node handler, plus the
@@ -10,7 +11,8 @@ import { fileURLToPath } from 'node:url';
  * a browser that accepts br or gzip gets the precompressed file, with the
  * same long-lived caching Astro gives hashed assets; everything else (pages,
  * API routes, other files) goes to Astro unchanged. A proxy in front can
- * still compress pages; this makes the big scripts small without one.
+ * still compress pages; this makes the big scripts small without one. Map
+ * styles and the icon sprite are readable from any site (publicFiles.mjs).
  *
  *   HOST=0.0.0.0 PORT=4321 node scripts/serve.mjs
  */
@@ -58,6 +60,12 @@ const precompressed = (req) => {
 };
 
 const server = http.createServer((req, res) => {
+  // Map styles and the icon sprite may be loaded from any site (see
+  // publicFiles.mjs); Astro's static handler keeps headers set here.
+  if (isPublicFile(new URL(req.url, 'http://localhost').pathname)) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+
   const asset = precompressed(req);
 
   if (!asset) {
