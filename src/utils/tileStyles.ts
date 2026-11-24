@@ -24,8 +24,10 @@ const labelPaint = {
 };
 
 /**
- * Tiles from `npm run build:tiles`: boundaries in "features", points to
- * label in "labels". With `layer`, the same look on a single layer of any
+ * Tile sets that don't follow og_pmtiles' convention: older ones with
+ * boundaries in "features" and points to label in "labels" (from the
+ * renderer's former build:tiles script). With `layer`, the same look on a
+ * single layer of any
  * name (points filtered to points).
  *
  * @param labelField
@@ -289,8 +291,9 @@ export const clusteredPlacesStyles = (labelField: string, separateAreas = false,
 export const isPlacesTileSet = (layerIds: string[]) => layerIds.includes('places');
 
 /**
- * The styles for a tile set with these vector layers: build:tiles' own
- * ("features"/"labels"), og_pmtiles' "places", or the default look on the
+ * The styles for a tile set with these vector layers: og_pmtiles' "places"
+ * (the way an atlas's tiles are built), older "features"/"labels" sets, or
+ * the default look on the
  * first layer of anything else.
  *
  * @param layerIds

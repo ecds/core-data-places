@@ -44,7 +44,7 @@ interface Props {
   /**
    * (Optional) array of MapLibre layer definitions (without `source`, which is
    * filled in). Use `source-layer` to address the tile layers (the
-   * build.tiles.mjs script produces "features" and "labels"). When omitted,
+   * og_pmtiles task writes a "places" layer). When omitted,
    * a style is chosen from the tile set's layers (utils/tileStyles.ts).
    */
   styles?: any[],
@@ -52,7 +52,7 @@ interface Props {
   /**
    * URL of the .pmtiles archive, a TileJSON document (.json; e.g. ECDS's
    * tile server, or the atlas's /map-tiles proxy of it), or a {z}/{x}/{y}
-   * tile URL template (as produced by `npm run build:tiles -- --dir`).
+   * tile URL template.
    * Relative URLs are resolved against the site origin.
    */
   url: string,
@@ -126,8 +126,8 @@ const scaledPaint = (style: any, opacity: number) => {
 };
 
 /**
- * Renders a self-hosted PMTiles vector tile overlay. Tiles can be generated
- * from the project's Core Data geometries with `npm run build:tiles` — the
+ * Renders a self-hosted PMTiles vector tile overlay. An atlas's tiles are
+ * built by the indexing engine's og_pmtiles task (FairData) — the
  * scalable way to put an entire project's records (tens of thousands of
  * features) on the map.
  */

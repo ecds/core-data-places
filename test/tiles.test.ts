@@ -73,7 +73,7 @@ describe('stylesForLayers', () => {
     expect(stylesForLayers(['places'], 'name')).toEqual(clusteredPlacesStyles('name'));
   });
 
-  it('uses the default style for build:tiles output and when unknown', () => {
+  it('uses the default style for older features/labels tile sets and when unknown', () => {
     expect(stylesForLayers(['features', 'labels'], 'name')).toEqual(defaultStyles('name'));
     expect(stylesForLayers([], 'name')).toEqual(defaultStyles('name'));
   });
