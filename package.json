@@ -30,7 +30,6 @@
     "@types/underscore": "^1.11.15",
     "@vitest/browser-playwright": "^4.0.16",
     "astro": "^5.9.4",
-    "netlify-cli": "^17.38.1",
     "patch-package": "^8.0.1",
     "prettier-plugin-astro": "^0.13.0",
     "ts-node": "^10.9.2",

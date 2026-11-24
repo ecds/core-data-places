@@ -37,8 +37,9 @@ ENV NODE_ENV=production
 RUN npm run build:server
 
 # Slim node_modules now that the build is done — the standalone server loads
-# none of this. The Netlify adapter + CLI exist only for the (unused) Netlify
-# build path; netlify-cli alone is ~840 MB and drags in solana/viem/hermes.
+# none of this. The Netlify adapter exists only for the (unused) Netlify build
+# path. (netlify-cli is no longer a dependency at all: ~840 MB, and its old
+# sharp 0.32 can't install on Node 24 once the npm ci layer isn't cached.)
 # `npm uninstall` is dependency-aware, so it also drops their exclusive
 # transitive deps while keeping anything a runtime package still needs. Then
 # prune the remaining devDependencies (astro/vite/vitest/playwright/…).
@@ -49,7 +50,7 @@ RUN npm run build:server
 # is build-only too (icons are bundled at build). All confirmed 0 server-side
 # imports; @astrojs/node externalizes node_modules, so 0 refs = safe to drop.
 RUN npm uninstall --ignore-scripts \
-      netlify-cli @netlify/functions @netlify/edge-functions @astrojs/netlify \
+      @netlify/functions @netlify/edge-functions @astrojs/netlify \
       @clerk/backend @clerk/clerk-js @clerk/ui \
  && npm prune --omit=dev \
  && rm -rf node_modules/react-icons node_modules/@solana-mobile node_modules/viem
