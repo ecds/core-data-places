@@ -21,6 +21,11 @@
   },
   "layers": [
     {
+      "name": "Simple map",
+      "layer_type": "vector",
+      "url": "/styles/simple.json"
+    },
+    {
       "name": "OpenStreetMap",
       "layer_type": "raster",
       "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"

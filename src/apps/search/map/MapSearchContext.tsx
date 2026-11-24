@@ -168,7 +168,18 @@ export const MapSearchContextProvider = ({ allowSave, children, preload }: Props
     // v1 documents carry `geo.point`/`geo.shape` rather than an embedded GeoJSON geometry
     const geoHits = _.map(hits, (hit) => withGeometry(hit, geometry));
 
-    setFeatures(withFeatureIds(TypesenseUtils.getFeatures(features, geoHits, geometry, properties, options)));
+    // The shared feature builder keeps only each record's id and name; the
+    // map's icons by type need the records' types, so they're added back.
+    const typesByRecord = new Map(_.map(hits, (hit: any) => [hit.uuid, hit.types]));
+    const built = TypesenseUtils.getFeatures(features, geoHits, geometry, properties, options);
+
+    setFeatures(withFeatureIds(_.map(built, (feature: any) => ({
+      ...feature,
+      properties: {
+        ...feature.properties,
+        types: _.uniq(_.flatten(_.map(feature.properties?.items || [], (item: any) => typesByRecord.get(item.uuid) || []))),
+      }
+    }))));
   }, [geometries, hits]);
 
   /**

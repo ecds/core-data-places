@@ -1,0 +1,145 @@
+{
+  "version": 8,
+  "name": "Simple map",
+  "metadata": {
+    "og:description": "Land, water, roads and boundaries only: no points of interest, no place or road labels, so the atlas's own data is the only thing named on the map. OpenStreetMap data in the OpenMapTiles schema, from OpenFreeMap (no key). Colours follow the Georgia Coast Atlas. Labels the atlas draws use ECDS's font service."
+  },
+  "glyphs": "https://glyphs.ecds.io/{fontstack}/{range}.pbf",
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "https://tiles.openfreemap.org/planet"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": { "background-color": "#f3f1ea" }
+    },
+    {
+      "id": "landcover-wood",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "filter": ["==", ["get", "class"], "wood"],
+      "paint": { "fill-color": "#68825C", "fill-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.06, 12, 0.14] }
+    },
+    {
+      "id": "landcover-grass",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "filter": ["match", ["get", "class"], ["grass", "farmland"], true, false],
+      "paint": { "fill-color": "#8fa37f", "fill-opacity": 0.08 }
+    },
+    {
+      "id": "landcover-wetland",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "filter": ["==", ["get", "class"], "wetland"],
+      "paint": { "fill-color": "#7f9c8a", "fill-opacity": 0.14 }
+    },
+    {
+      "id": "landcover-sand",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "filter": ["==", ["get", "class"], "sand"],
+      "paint": { "fill-color": "#e8dfc4", "fill-opacity": 0.7 }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "park",
+      "paint": { "fill-color": "#68825C", "fill-opacity": 0.1 }
+    },
+    {
+      "id": "landuse-residential",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landuse",
+      "minzoom": 9,
+      "filter": ["match", ["get", "class"], ["residential", "suburb", "neighbourhood"], true, false],
+      "paint": { "fill-color": "#e6e2d8", "fill-opacity": 0.6 }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "waterway",
+      "filter": ["!=", ["get", "intermittent"], 1],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#99b3cc",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, ["match", ["get", "class"], "river", 1, 0.4], 14, ["match", ["get", "class"], "river", 4, 1.5]]
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "water",
+      "filter": ["!=", ["get", "brunnel"], "tunnel"],
+      "paint": { "fill-color": "#aec4d8" }
+    },
+    {
+      "id": "boundary-county",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "boundary",
+      "minzoom": 7,
+      "filter": ["all", ["==", ["get", "admin_level"], 6], ["!=", ["get", "maritime"], 1]],
+      "paint": { "line-color": "#797B77", "line-opacity": 0.35, "line-width": 0.6, "line-dasharray": [3, 2] }
+    },
+    {
+      "id": "boundary-state",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "boundary",
+      "filter": ["all", ["<=", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]],
+      "paint": { "line-color": "#565855", "line-opacity": 0.5, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 10, 1.4] }
+    },
+    {
+      "id": "railway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "minzoom": 9,
+      "filter": ["all", ["==", ["get", "class"], "rail"], ["!=", ["get", "brunnel"], "tunnel"]],
+      "paint": { "line-color": "#b9bcb6", "line-width": 0.8, "line-dasharray": [2, 2] }
+    },
+    {
+      "id": "road-minor",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "minzoom": 11,
+      "filter": ["all", ["match", ["get", "class"], ["minor", "service", "track"], true, false], ["!=", ["get", "brunnel"], "tunnel"]],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.5, 16, 4] }
+    },
+    {
+      "id": "road-secondary",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "minzoom": 8,
+      "filter": ["all", ["match", ["get", "class"], ["secondary", "tertiary"], true, false], ["!=", ["get", "brunnel"], "tunnel"]],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": { "line-color": "#d7dad4", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.4, 16, 6] }
+    },
+    {
+      "id": "road-major",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "minzoom": 5,
+      "filter": ["all", ["match", ["get", "class"], ["motorway", "trunk", "primary"], true, false], ["!=", ["get", "brunnel"], "tunnel"]],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": { "line-color": "#C3C8C1", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.5, 10, 1.6, 16, 8] }
+    }
+  ]
+}

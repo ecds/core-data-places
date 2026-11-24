@@ -2,6 +2,7 @@ import { useLoadedMap } from '@peripleo/maplibre';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { useEffect, useRef } from 'react';
+import { ensureSprite } from '@utils/sprite';
 import { absoluteTiles, tileUrlKind, vectorLayerIds } from '@utils/tiles';
 import {
   CLICKABLE_PLACE_LAYERS,
@@ -9,8 +10,6 @@ import {
   FIXED_LAYER_PREFIX,
   isPlacesTileSet,
   PLACE_LAYER_IDS,
-  SPRITE_ID,
-  SPRITE_PATH,
   stylesForLayers,
   type TypeIcons,
   usesIcons
@@ -84,17 +83,7 @@ interface Props {
   typeIcons?: TypeIcons
 }
 
-/**
- * Loads the renderer's icon sprite next to the base map's, once per style
- * (a base map change replaces the style and its sprites).
- */
-const ensureSprite = (map: any) => {
-  const sprites = map.getSprite?.() || [];
 
-  if (!sprites.some((sprite: any) => sprite.id === SPRITE_ID)) {
-    map.addSprite(SPRITE_ID, new URL(SPRITE_PATH, window.location.origin).toString());
-  }
-};
 
 /**
  * A style's MapLibre layer id: og_pmtiles' are fixed (see PLACE_LAYER_IDS),

@@ -129,6 +129,28 @@ const KeepOverlaysBelowData = ({ names }: { names: string[] }) => {
   return null;
 };
 
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors';
+
+/**
+ * Adds a credit to a raster base layer's tile source.
+ */
+const withAttribution = (style: any, layer: any) => {
+  if (!style || typeof style === 'string' || !style.sources) {
+    return style;
+  }
+
+  const attribution = layer?.attribution || (/openstreetmap\.org/.test(layer?.url || '') ? OSM_ATTRIBUTION : null);
+
+  if (!attribution) {
+    return style;
+  }
+
+  return {
+    ...style,
+    sources: _.mapObject(style.sources, (source: any) => ({ ...source, attribution }))
+  };
+};
+
 interface Props {
   children: ReactNode,
   /**
@@ -220,6 +242,11 @@ const Map = (props: Props) => {
     'hover:opacity-90'
   ].join(' '), []);
 
+  // The base map's style, credited: a vector style brings its sources' own
+  // attribution; a raster layer has none, so it takes the layer's
+  // `attribution`, or OpenStreetMap's for its tiles (its licence requires it).
+  const baseStyle = useMemo(() => withAttribution(PeripleoUtils.toLayerStyle(baseLayer, baseLayer.name), baseLayer), [baseLayer]);
+
   // Without WebGL2 (hardware acceleration off), MapLibre can't start and its
   // error would unmount the whole page: show a notice in the map's place.
   const canDraw = useMemo(() => supportsWebGL(), []);
@@ -238,9 +265,9 @@ const Map = (props: Props) => {
     <MapErrorBoundary className={props.classNames?.root}>
       <MapProvider>
         <PeripleoMap
-          attributionControl={false}
+          attributionControl={{ compact: true }}
           className={clsx('grow', props.classNames?.root)}
-          style={PeripleoUtils.toLayerStyle(baseLayer, baseLayer.name)}
+          style={baseStyle}
         >
           <div
             className={clsx('absolute top-0 right-0 flex flex-col py-3 px-3 gap-y-2', props.classNames?.controls)}
