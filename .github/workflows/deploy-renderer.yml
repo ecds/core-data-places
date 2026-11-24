@@ -88,14 +88,40 @@ jobs:
         if: steps.ready.outputs.ok == 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push Docker image
+      - name: Build Docker image
         if: steps.ready.outputs.ok == 'true'
         run: |
           docker build \
             --platform linux/amd64 \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # The unit tests don't run the image. Start it the way ECS does and
+      # require /health before anything is pushed, so an image that can't
+      # boot (a file missing from the runtime stage, say) never reaches ECS.
+      - name: Check the image starts
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          docker run -d --name renderer-check -p 8080:8080 \
+            -e OG_SITE_SLUG=check -e OG_CONSOLE_URL=http://127.0.0.1:9 \
+            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8080/health 2> /dev/null; then
+              echo "/health answered after ${i}s"
+              curl -fsS -o /dev/null http://127.0.0.1:8080/styles/simple.json
+              docker rm -f renderer-check > /dev/null
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The image did not answer /health within 30 s:"
+          docker logs renderer-check || true
+          docker rm -f renderer-check > /dev/null || true
+          exit 1
+
+      - name: Push Docker image
+        if: steps.ready.outputs.ok == 'true'
+        run: docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Force ECS service restart
         if: steps.ready.outputs.ok == 'true'
