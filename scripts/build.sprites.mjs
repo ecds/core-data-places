@@ -5,7 +5,9 @@
  * "og" (icons are `og:church`, …) next to the base map's own.
  *
  * Every icon must be listed in `icons/MANIFEST.json` with its source and
- * licence, since the sprite is published with every atlas.
+ * licence, since the sprite is published with every atlas; the credits and
+ * licence texts (`icons/ATTRIBUTION.md`, `icons/licenses/`) are published
+ * next to it.
  *
  * Requires spreet (https://github.com/flother/spreet) on the PATH:
  * `cargo install spreet`. The built files are committed, so building the
@@ -36,5 +38,9 @@ const spreet = (args) => execFileSync('spreet', args, { stdio: 'inherit' });
 
 spreet(['--sdf', iconsDir, path.join(outDir, 'og')]);
 spreet(['--sdf', '--retina', iconsDir, path.join(outDir, 'og@2x')]);
+
+// The credits and licence texts the icons' licences require go out with it.
+fs.copyFileSync(path.join(iconsDir, 'ATTRIBUTION.md'), path.join(outDir, 'ATTRIBUTION.md'));
+fs.cpSync(path.join(iconsDir, 'licenses'), path.join(outDir, 'licenses'), { recursive: true });
 
 console.log(`Built public/sprites/og from ${icons.length} icons: ${icons.join(', ')}`);

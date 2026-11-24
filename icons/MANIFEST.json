@@ -1,10 +1,156 @@
 {
-  "comment": "Every icon in this folder, with where it came from and its licence. scripts/build.sprites.mjs refuses to build a sprite with an icon missing here. Single-colour SVGs: the sprite is built as SDF, so MapLibre recolours them with icon-color.",
+  "comment": "Every icon in this folder, with where it came from and its licence. scripts/build.sprites.mjs refuses to build a sprite with an icon missing here. Single-colour SVGs, normalised to 15x15; the sprite is built as SDF, so MapLibre recolours them with icon-color. Names follow the Georgia Coast Atlas's, so its type-to-icon settings carry over. Notices and credits the licences require are in ATTRIBUTION.md, published with the sprite.",
   "icons": {
-    "church": { "source": "Drawn for Open Geographies (placeholder)", "license": "Same as this repository" },
-    "lighthouse": { "source": "Drawn for Open Geographies (placeholder)", "license": "Same as this repository" },
-    "marker": { "source": "Drawn for Open Geographies (placeholder)", "license": "Same as this repository" },
-    "tree": { "source": "Drawn for Open Geographies (placeholder)", "license": "Same as this repository" },
-    "water": { "source": "Drawn for Open Geographies (placeholder)", "license": "Same as this repository" }
+    "beach": {
+      "source": "ProIcons: beach",
+      "url": "https://github.com/ProCode-Software/proicons",
+      "license": "MIT"
+    },
+    "bridge": {
+      "source": "Lineicons: bridge",
+      "url": "https://github.com/LineiconsHQ/Lineicons",
+      "license": "MIT"
+    },
+    "building": {
+      "source": "GitLab SVGs (Pajamas): building",
+      "url": "https://gitlab.com/gitlab-org/gitlab-svgs",
+      "license": "MIT"
+    },
+    "cemetery": {
+      "source": "Maki: cemetery",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0",
+      "note": "Replaces GCA's Map Icons cemetery (SIL OFL)."
+    },
+    "church": {
+      "source": "Maki: religious-christian",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0",
+      "note": "Replaces GCA's Pico-icon church (SIL OFL)."
+    },
+    "coral-reef": {
+      "source": "Temaki: coral-reef",
+      "url": "https://github.com/rapideditor/temaki",
+      "license": "CC0-1.0"
+    },
+    "forest": {
+      "source": "Material Design Icons (Pictogrammers): forest",
+      "url": "https://github.com/Templarian/MaterialDesign",
+      "license": "Apache-2.0"
+    },
+    "fort": {
+      "source": "Maki: castle",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0",
+      "note": "Replaces GCA's Pico-icon fort (SIL OFL)."
+    },
+    "golf": {
+      "source": "Ionicons: golf",
+      "url": "https://github.com/ionic-team/ionicons",
+      "license": "MIT"
+    },
+    "government": {
+      "source": "Röntgen: government",
+      "url": "https://github.com/enzet/Roentgen",
+      "license": "CC-BY-4.0",
+      "credit": "Röntgen icons by Sergey Vartanov"
+    },
+    "harbor-11": {
+      "source": "Maki (v6): harbor-11",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0"
+    },
+    "hospital": {
+      "source": "Maki: hospital",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0",
+      "note": "Replaces GCA's Material Design Iconic Font hospital (SIL OFL)."
+    },
+    "house": {
+      "source": "Pepicons: house",
+      "url": "https://github.com/CyCraft/pepicons",
+      "license": "CC-BY-4.0",
+      "credit": "Pepicons by CyCraft"
+    },
+    "island": {
+      "source": "Temaki: island-trees-building",
+      "url": "https://github.com/rapideditor/temaki",
+      "license": "CC0-1.0"
+    },
+    "library": {
+      "source": "Maki: library",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0",
+      "note": "Replaces GCA's Material Design Iconic Font library (SIL OFL)."
+    },
+    "lighthouse": {
+      "source": "Maki: lighthouse",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0",
+      "note": "Replaces GCA's icon, which was Google's Lighthouse product logo."
+    },
+    "marker": {
+      "source": "Drawn for Open Geographies",
+      "license": "Same as this repository"
+    },
+    "mountain": {
+      "source": "Myna UI: mountain",
+      "url": "https://github.com/praveenjuge/mynaui-icons",
+      "license": "MIT"
+    },
+    "museum": {
+      "source": "Temaki: museum",
+      "url": "https://github.com/rapideditor/temaki",
+      "license": "CC0-1.0"
+    },
+    "park": {
+      "source": "Maki: park",
+      "url": "https://github.com/mapbox/maki",
+      "license": "CC0-1.0",
+      "note": "Replaces GCA's Map Icons park (SIL OFL)."
+    },
+    "plane": {
+      "source": "Röntgen: plane",
+      "url": "https://github.com/enzet/Roentgen",
+      "license": "CC-BY-4.0",
+      "credit": "Röntgen icons by Sergey Vartanov"
+    },
+    "school": {
+      "source": "Material Symbols (Google): school",
+      "url": "https://github.com/google/material-design-icons",
+      "license": "Apache-2.0"
+    },
+    "sinking-ship": {
+      "source": "game-icons.net: sinking-ship",
+      "url": "https://game-icons.net/1x1/delapouite/sinking-ship.html",
+      "license": "CC-BY-3.0",
+      "credit": "Sinking ship by Delapouite, game-icons.net"
+    },
+    "tower": {
+      "source": "Material Design Icons (Pictogrammers): tower-beach",
+      "url": "https://github.com/Templarian/MaterialDesign",
+      "license": "Apache-2.0",
+      "note": "A lifeguard tower."
+    },
+    "train": {
+      "source": "Phosphor: train",
+      "url": "https://github.com/phosphor-icons/core",
+      "license": "MIT"
+    },
+    "tree": {
+      "source": "Röntgen: tree",
+      "url": "https://github.com/enzet/Roentgen",
+      "license": "CC-BY-4.0",
+      "credit": "Röntgen icons by Sergey Vartanov"
+    },
+    "water": {
+      "source": "Drawn for Open Geographies",
+      "license": "Same as this repository"
+    },
+    "water-flow": {
+      "source": "Drawn for Open Geographies",
+      "license": "Same as this repository",
+      "note": "Waves. Replaces GCA's icon, which was a maths symbol (Phosphor approximate-equals)."
+    }
   }
 }

@@ -1,42 +1,226 @@
 {
-  "church": {
+  "beach": {
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
     "x": 0,
     "y": 0,
+    "sdf": true
+  },
+  "bridge": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 0,
+    "y": 54,
+    "sdf": true
+  },
+  "building": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 0,
+    "y": 108,
+    "sdf": true
+  },
+  "cemetery": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 0,
+    "y": 162,
+    "sdf": true
+  },
+  "church": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 54,
+    "y": 0,
+    "sdf": true
+  },
+  "coral-reef": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 54,
+    "y": 54,
+    "sdf": true
+  },
+  "forest": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 54,
+    "y": 108,
+    "sdf": true
+  },
+  "fort": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 54,
+    "y": 162,
+    "sdf": true
+  },
+  "golf": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 108,
+    "y": 0,
+    "sdf": true
+  },
+  "government": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 108,
+    "y": 54,
+    "sdf": true
+  },
+  "harbor-11": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 108,
+    "y": 108,
+    "sdf": true
+  },
+  "hospital": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 108,
+    "y": 162,
+    "sdf": true
+  },
+  "house": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 162,
+    "y": 0,
+    "sdf": true
+  },
+  "island": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 162,
+    "y": 54,
+    "sdf": true
+  },
+  "library": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 162,
+    "y": 108,
     "sdf": true
   },
   "lighthouse": {
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 0,
-    "y": 54,
+    "x": 162,
+    "y": 162,
     "sdf": true
   },
   "marker": {
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 54,
+    "x": 216,
     "y": 0,
+    "sdf": true
+  },
+  "mountain": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 216,
+    "y": 54,
+    "sdf": true
+  },
+  "museum": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 216,
+    "y": 108,
+    "sdf": true
+  },
+  "park": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 216,
+    "y": 162,
+    "sdf": true
+  },
+  "plane": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 270,
+    "y": 0,
+    "sdf": true
+  },
+  "school": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 324,
+    "y": 0,
+    "sdf": true
+  },
+  "sinking-ship": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 378,
+    "y": 0,
+    "sdf": true
+  },
+  "tower": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 432,
+    "y": 0,
+    "sdf": true
+  },
+  "train": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 270,
+    "y": 54,
     "sdf": true
   },
   "tree": {
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 54,
-    "y": 54,
+    "x": 270,
+    "y": 108,
     "sdf": true
   },
   "water": {
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 108,
-    "y": 0,
+    "x": 270,
+    "y": 162,
+    "sdf": true
+  },
+  "water-flow": {
+    "height": 54,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 324,
+    "y": 54,
     "sdf": true
   }
 }
